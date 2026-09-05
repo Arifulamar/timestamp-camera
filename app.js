@@ -122,18 +122,26 @@ function normalizeAngle(angle) {
 }
 
 function readDeviceOrientationAngle() {
-  const type = screen.orientation?.type || '';
-  if (type.startsWith('portrait-primary')) return 0;
-  if (type.startsWith('portrait-secondary')) return 180;
-  if (type.startsWith('landscape-primary')) return 90;
-  if (type.startsWith('landscape-secondary')) return -90;
+  // iPhone / iPad Safari
+  if (typeof window.orientation === 'number') {
+    return normalizeAngle(window.orientation);
+  }
 
-  const rawAngle = typeof screen.orientation?.angle === 'number'
-    ? screen.orientation.angle
-    : (typeof window.orientation === 'number' ? window.orientation : null);
+  // Android / Chrome
+  if (
+    screen.orientation &&
+    typeof screen.orientation.angle === 'number'
+  ) {
+    return normalizeAngle(screen.orientation.angle);
+  }
 
-  if (rawAngle !== null) return normalizeAngle(rawAngle);
-  return window.innerWidth > window.innerHeight ? 90 : 0;
+  // Fallback jika Orientation API tidak tersedia
+  const viewport = window.visualViewport;
+
+  const width = viewport?.width || window.innerWidth;
+  const height = viewport?.height || window.innerHeight;
+
+  return width > height ? 90 : 0;
 }
 
 function describeAngle(angle) {
@@ -158,20 +166,32 @@ function getOverlayTransformOrigin(position) {
 
 function updateOverlayRotation() {
   const angle = getWatermarkAngle();
-  timestampOverlay.style.transformOrigin = getOverlayTransformOrigin(timestampPosition.value);
-  timestampOverlay.style.transform = angle ? `rotate(${angle}deg)` : 'none';
+
+  // Putar caption timestamp
+  timestampOverlay.style.transformOrigin = 'center center';
+  timestampOverlay.style.transform = `rotate(${angle}deg)`;
 
   if (orientationHint) {
-    const modeText = watermarkRotationMode?.value === 'auto'
-      ? `otomatis (${describeAngle(angle)})`
-      : `manual (${angle}°)`;
-    orientationHint.textContent = `Orientasi perangkat: ${describeAngle(currentOrientationAngle)} · Watermark: ${modeText}`;
+    const modeText =
+      watermarkRotationMode?.value === 'auto'
+        ? `otomatis (${describeAngle(angle)})`
+        : `manual (${angle}°)`;
+
+    orientationHint.textContent =
+      `Orientasi perangkat: ${describeAngle(currentOrientationAngle)} · Watermark: ${modeText}`;
   }
 }
 
 function refreshOrientation() {
   currentOrientationAngle = readDeviceOrientationAngle();
   updateOverlayRotation();
+}
+
+function handleOrientationChange() {
+  // Beri waktu browser menyelesaikan perubahan orientasi
+  window.setTimeout(() => {
+    refreshOrientation();
+  }, 180);
 }
 
 function updateOverlayPosition() {
@@ -441,10 +461,15 @@ function buildFilename(date = new Date()) {
 }
 
 function capturePhoto() {
-  if (!stream || !video.videoWidth || !video.videoHeight) return;
+   if (!stream || !video.videoWidth || !video.videoHeight) return;
+
+  // Ambil orientasi persis ketika tombol foto ditekan
   refreshOrientation();
+
   const capturedAt = new Date();
+
   triggerFlash();
+
 
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
@@ -656,9 +681,22 @@ installAppBtn.addEventListener('click', async () => {
   installAppBtn.classList.add('hidden');
 });
 window.addEventListener('appinstalled', () => installAppBtn.classList.add('hidden'));
-window.addEventListener('resize', refreshOrientation);
-window.addEventListener('orientationchange', refreshOrientation);
-screen.orientation?.addEventListener?.('change', refreshOrientation);
+window.addEventListener('resize', handleOrientationChange);
+
+window.addEventListener(
+  'orientationchange',
+  handleOrientationChange
+);
+
+window.visualViewport?.addEventListener?.(
+  'resize',
+  handleOrientationChange
+);
+
+screen.orientation?.addEventListener?.(
+  'change',
+  handleOrientationChange
+);
 
 window.addEventListener('beforeunload', () => {
   stopCamera();
