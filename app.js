@@ -342,10 +342,10 @@ function handleLocationError(error) {
 
 function getCanvasMetrics(lines, width) {
   const scale = Math.max(1, width / 1080);
-  const fontSize = Math.round(Math.max(24, Math.min(42 * scale, width * 0.042)));
-  const lineHeight = Math.round(fontSize * 1.34);
-  const paddingX = Math.round(fontSize * 0.66);
-  const paddingY = Math.round(fontSize * 0.52);
+  const fontSize = Math.round(Math.max(16, Math.min(28 * scale, width * 0.028)));
+  const lineHeight = Math.round(fontSize * 1.22);
+  const paddingX = Math.round(fontSize * 0.5);
+  const paddingY = Math.round(fontSize * 0.4);
   const margin = Math.round(Math.max(20, width * 0.024));
   const maxTextWidth = Math.min(width * 0.72, width - margin * 2 - paddingX * 2);
 
