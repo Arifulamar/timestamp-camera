@@ -242,8 +242,18 @@ summary { cursor: pointer; font-weight: 800; }
 details p { color: var(--muted); line-height: 1.6; margin-bottom: 0; }
 footer { text-align: center; color: var(--muted); font-size: 13px; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
 
-@media (orientation: landscape) and (max-height: 700px) {
-  .camera-stage { aspect-ratio: 16 / 9; max-height: 68vh; }
+@media (orientation: landscape) {
+  .camera-stage {
+    aspect-ratio: 16 / 9;
+    max-height: 78vh;
+  }
+}
+
+@media (orientation: portrait) {
+  .camera-stage {
+    aspect-ratio: 3 / 4;
+    max-height: 72vh;
+  }
 }
 @media (max-width: 860px) {
   .settings-grid { grid-template-columns: repeat(2, 1fr); }
