@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+
+  <title>Timestamp Camera Online | Foto dengan Tanggal & Waktu</title>
+  <meta name="description" content="Web app kamera timestamp untuk ponsel. Ambil foto langsung dari kamera dan tambahkan tanggal serta waktu secara otomatis tanpa instal aplikasi." />
+  <meta name="keywords" content="timestamp camera, kamera timestamp online, foto tanggal waktu, camera timestamp web, kamera ponsel online" />
+  <meta name="author" content="Timestamp Camera" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://example.com/" />
+
+  <meta property="og:title" content="Timestamp Camera Online" />
+  <meta property="og:description" content="Ambil foto dari kamera ponsel dan tambahkan timestamp otomatis." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://example.com/" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Timestamp Camera Online" />
+  <meta name="twitter:description" content="Foto dengan tanggal dan waktu langsung dari browser ponsel." />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Timestamp Camera Online",
+    "applicationCategory": "PhotographyApplication",
+    "operatingSystem": "Android, iOS, Windows, macOS",
+    "description": "Aplikasi web untuk mengambil foto dari kamera ponsel dengan tanggal dan waktu otomatis.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "IDR"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <div>
+        <h1>Timestamp Camera</h1>
+        <p>Foto dengan tanggal & waktu otomatis</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="camera-card" aria-labelledby="camera-title">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">KAMERA PONSEL</span>
+          <h2 id="camera-title">Ambil foto dengan timestamp</h2>
+        </div>
+        <button id="switchCamera" class="btn btn-secondary" type="button" aria-label="Ganti kamera">
+          Ganti Kamera
+        </button>
+      </div>
+
+      <div class="camera-stage" id="cameraStage">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="live-badge"><span></span> LIVE</div>
+        <div id="timestampOverlay" class="timestamp-overlay" aria-live="polite"></div>
+        <div id="cameraPlaceholder" class="camera-placeholder">
+          <div class="camera-icon">📷</div>
+          <h3>Kamera belum aktif</h3>
+          <p>Tekan tombol di bawah untuk memberikan izin kamera.</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="startCamera" class="btn btn-primary" type="button">Aktifkan Kamera</button>
+        <button id="capturePhoto" class="btn btn-capture" type="button" disabled>
+          <span class="capture-ring"></span>
+          Ambil Foto
+        </button>
+      </div>
+
+      <div id="statusMessage" class="status" role="status">
+        Kamera membutuhkan HTTPS atau localhost agar dapat diakses oleh browser.
+      </div>
+    </section>
+
+    <section class="settings-card" aria-labelledby="settings-title">
+      <div class="section-heading compact">
+        <div>
+          <span class="eyebrow">PENGATURAN</span>
+          <h2 id="settings-title">Tampilan timestamp</h2>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <label>
+          Format tanggal
+          <select id="dateFormat">
+            <option value="id-long">Sabtu, 5 September 2026</option>
+            <option value="id-short">05/09/2026</option>
+            <option value="iso">2026-09-05</option>
+          </select>
+        </label>
+
+        <label>
+          Posisi timestamp
+          <select id="timestampPosition">
+            <option value="bottom-left">Kiri bawah</option>
+            <option value="bottom-right">Kanan bawah</option>
+            <option value="top-left">Kiri atas</option>
+            <option value="top-right">Kanan atas</option>
+          </select>
+        </label>
+
+        <label class="toggle-row">
+          <span>
+            Tampilkan detik
+            <small>Contoh: 07:47:23</small>
+          </span>
+          <input id="showSeconds" type="checkbox" checked />
+        </label>
+      </div>
+    </section>
+
+    <section id="resultCard" class="result-card hidden" aria-labelledby="result-title">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">HASIL FOTO</span>
+          <h2 id="result-title">Foto siap disimpan</h2>
+        </div>
+      </div>
+
+      <img id="capturedImage" alt="Hasil foto dengan timestamp" />
+
+      <div class="controls result-controls">
+        <a id="downloadPhoto" class="btn btn-primary" href="#" download="timestamp-photo.jpg">Unduh Foto</a>
+        <button id="retakePhoto" class="btn btn-secondary" type="button">Ambil Ulang</button>
+      </div>
+    </section>
+
+    <section class="seo-content">
+      <h2>Kamera timestamp online untuk ponsel</h2>
+      <p>
+        Timestamp Camera adalah aplikasi web ringan untuk mengambil foto langsung dari kamera ponsel dan menambahkan tanggal serta waktu pada foto secara otomatis. Tidak perlu instal aplikasi tambahan.
+      </p>
+      <div class="feature-grid">
+        <article>
+          <h3>📱 Mobile Friendly</h3>
+          <p>Antarmuka responsif untuk Android dan iPhone serta mendukung kamera depan dan belakang.</p>
+        </article>
+        <article>
+          <h3>⏱️ Timestamp Otomatis</h3>
+          <p>Tanggal dan waktu mengikuti perangkat pengguna dan tertanam langsung pada hasil foto.</p>
+        </article>
+        <article>
+          <h3>🔒 Privasi</h3>
+          <p>Foto diproses di browser. Aplikasi ini tidak mengunggah foto ke server.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Timestamp Camera Online · Berjalan langsung di browser</p>
+  </footer>
+
+  <canvas id="photoCanvas" hidden></canvas>
+  <script src="app.js" defer></script>
+</body>
+</html>
