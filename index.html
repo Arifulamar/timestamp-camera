@@ -175,6 +175,7 @@
         <div>
           <span class="eyebrow">WATERMARK</span>
           <h2 id="settings-title">Tampilan timestamp</h2>
+          <p id="orientationHint" class="field-help orientation-hint">Orientasi perangkat: potret normal (0°) · Watermark: otomatis</p>
         </div>
       </div>
 
@@ -195,6 +196,17 @@
             <option value="top-left">Kiri atas</option>
             <option value="top-right">Kanan atas</option>
           </select>
+        </label>
+        <label>
+          Putaran watermark
+          <select id="watermarkRotationMode">
+            <option value="auto" selected>Otomatis ikut orientasi perangkat</option>
+            <option value="0">Tetap normal (0°)</option>
+            <option value="90">Putar 90°</option>
+            <option value="-90">Putar -90°</option>
+            <option value="180">Putar 180°</option>
+          </select>
+          <small class="field-help">Saat mode otomatis, tulisan watermark mengikuti orientasi ponsel saat foto diambil.</small>
         </label>
         <label>
           Kualitas JPG

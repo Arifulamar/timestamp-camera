@@ -39,3 +39,10 @@ dengan domain final Anda.
 
 ## Privasi
 Aplikasi tidak mengirim foto atau data GPS ke server aplikasi. Foto galeri tersimpan pada IndexedDB browser lokal. Tombol “Buka Peta” membuka Google Maps pada tab baru setelah pengguna meminta GPS.
+
+
+## Fitur baru v3
+
+- Putaran watermark otomatis mengikuti orientasi perangkat saat foto diambil.
+- Opsi manual: 0°, 90°, -90°, atau 180°.
+- Preview watermark ikut berputar di layar.

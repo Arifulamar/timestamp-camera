@@ -17,6 +17,7 @@ const retakePhoto = $('retakePhoto');
 const resultCard = $('resultCard');
 const dateFormat = $('dateFormat');
 const timestampPosition = $('timestampPosition');
+const watermarkRotationMode = $('watermarkRotationMode');
 const showSeconds = $('showSeconds');
 const showGps = $('showGps');
 const showIdentity = $('showIdentity');
@@ -42,6 +43,7 @@ const gallery = $('gallery');
 const emptyGallery = $('emptyGallery');
 const clearGalleryBtn = $('clearGallery');
 const installAppBtn = $('installApp');
+const orientationHint = $('orientationHint');
 
 let stream = null;
 let facingMode = 'environment';
@@ -53,9 +55,10 @@ let watchId = null;
 let logoImage = null;
 let deferredInstallPrompt = null;
 let dbPromise = null;
+let currentOrientationAngle = 0;
 
 const PREF_KEYS = [
-  'dateFormat', 'timestampPosition', 'showSeconds', 'showGps', 'showIdentity',
+  'dateFormat', 'timestampPosition', 'watermarkRotationMode', 'showSeconds', 'showGps', 'showIdentity',
   'imageQuality', 'saveGallery', 'organization', 'activity', 'officer', 'note', 'locationName'
 ];
 
@@ -108,6 +111,69 @@ function buildOverlayLines(date = new Date()) {
   return lines;
 }
 
+function normalizeAngle(angle) {
+  const raw = Number(angle);
+  if (!Number.isFinite(raw)) return 0;
+  const normalized = ((raw % 360) + 360) % 360;
+  if (normalized === 90) return 90;
+  if (normalized === 180) return 180;
+  if (normalized === 270) return -90;
+  return 0;
+}
+
+function readDeviceOrientationAngle() {
+  const type = screen.orientation?.type || '';
+  if (type.startsWith('portrait-primary')) return 0;
+  if (type.startsWith('portrait-secondary')) return 180;
+  if (type.startsWith('landscape-primary')) return 90;
+  if (type.startsWith('landscape-secondary')) return -90;
+
+  const rawAngle = typeof screen.orientation?.angle === 'number'
+    ? screen.orientation.angle
+    : (typeof window.orientation === 'number' ? window.orientation : null);
+
+  if (rawAngle !== null) return normalizeAngle(rawAngle);
+  return window.innerWidth > window.innerHeight ? 90 : 0;
+}
+
+function describeAngle(angle) {
+  if (angle === 90) return 'landscape kiri (90°)';
+  if (angle === -90) return 'landscape kanan (-90°)';
+  if (angle === 180) return 'potret terbalik (180°)';
+  return 'potret normal (0°)';
+}
+
+function getWatermarkAngle() {
+  return watermarkRotationMode?.value === 'auto'
+    ? currentOrientationAngle
+    : normalizeAngle(Number(watermarkRotationMode?.value || 0));
+}
+
+function getOverlayTransformOrigin(position) {
+  if (position === 'top-left') return 'left top';
+  if (position === 'top-right') return 'right top';
+  if (position === 'bottom-left') return 'left bottom';
+  return 'right bottom';
+}
+
+function updateOverlayRotation() {
+  const angle = getWatermarkAngle();
+  timestampOverlay.style.transformOrigin = getOverlayTransformOrigin(timestampPosition.value);
+  timestampOverlay.style.transform = angle ? `rotate(${angle}deg)` : 'none';
+
+  if (orientationHint) {
+    const modeText = watermarkRotationMode?.value === 'auto'
+      ? `otomatis (${describeAngle(angle)})`
+      : `manual (${angle}°)`;
+    orientationHint.textContent = `Orientasi perangkat: ${describeAngle(currentOrientationAngle)} · Watermark: ${modeText}`;
+  }
+}
+
+function refreshOrientation() {
+  currentOrientationAngle = readDeviceOrientationAngle();
+  updateOverlayRotation();
+}
+
 function updateOverlayPosition() {
   const pos = timestampPosition.value;
   logoPreview.style.left = 'auto';
@@ -122,6 +188,7 @@ function updateOverlayPosition() {
   if (pos.includes('right')) timestampOverlay.style.right = space;
   if (pos.includes('top')) timestampOverlay.style.top = space;
   if (pos.includes('bottom')) timestampOverlay.style.bottom = space;
+  updateOverlayRotation();
 }
 
 function updateTimestamp() {
@@ -300,14 +367,28 @@ function drawRoundedRect(x, y, w, h, r) {
 
 function drawWatermark(lines) {
   const m = getCanvasMetrics(lines, canvas.width);
+  const angle = getWatermarkAngle();
+  const rad = angle * Math.PI / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const rotatedWidth = Math.abs(m.boxWidth * cos) + Math.abs(m.boxHeight * sin);
+  const rotatedHeight = Math.abs(m.boxWidth * sin) + Math.abs(m.boxHeight * cos);
+
   let x = m.margin;
   let y = m.margin;
-  if (timestampPosition.value.includes('right')) x = canvas.width - m.boxWidth - m.margin;
-  if (timestampPosition.value.includes('bottom')) y = canvas.height - m.boxHeight - m.margin;
+  if (timestampPosition.value.includes('right')) x = canvas.width - rotatedWidth - m.margin;
+  if (timestampPosition.value.includes('bottom')) y = canvas.height - rotatedHeight - m.margin;
+
+  const centerX = x + rotatedWidth / 2;
+  const centerY = y + rotatedHeight / 2;
+  const boxX = -m.boxWidth / 2;
+  const boxY = -m.boxHeight / 2;
 
   ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.rotate(rad);
   ctx.fillStyle = 'rgba(0, 0, 0, 0.62)';
-  drawRoundedRect(x, y, m.boxWidth, m.boxHeight, Math.round(m.fontSize * .35));
+  drawRoundedRect(boxX, boxY, m.boxWidth, m.boxHeight, Math.round(m.fontSize * .35));
   ctx.fill();
 
   ctx.fillStyle = '#ffffff';
@@ -318,7 +399,7 @@ function drawWatermark(lines) {
   ctx.shadowOffsetY = 2;
 
   m.lines.forEach((line, index) => {
-    ctx.fillText(line, x + m.paddingX, y + m.paddingY + index * m.lineHeight);
+    ctx.fillText(line, boxX + m.paddingX, boxY + m.paddingY + index * m.lineHeight);
   });
   ctx.restore();
 }
@@ -361,6 +442,7 @@ function buildFilename(date = new Date()) {
 
 function capturePhoto() {
   if (!stream || !video.videoWidth || !video.videoHeight) return;
+  refreshOrientation();
   const capturedAt = new Date();
   triggerFlash();
 
@@ -543,6 +625,7 @@ function bindPreferenceEvents() {
       savePrefs();
       updateTimestamp();
       if (key === 'timestampPosition') updateOverlayPosition();
+      if (key === 'watermarkRotationMode') updateOverlayRotation();
     });
   });
 }
@@ -573,6 +656,9 @@ installAppBtn.addEventListener('click', async () => {
   installAppBtn.classList.add('hidden');
 });
 window.addEventListener('appinstalled', () => installAppBtn.classList.add('hidden'));
+window.addEventListener('resize', refreshOrientation);
+window.addEventListener('orientationchange', refreshOrientation);
+screen.orientation?.addEventListener?.('change', refreshOrientation);
 
 window.addEventListener('beforeunload', () => {
   stopCamera();
@@ -582,6 +668,7 @@ window.addEventListener('beforeunload', () => {
 
 loadPrefs();
 bindPreferenceEvents();
+refreshOrientation();
 updateOverlayPosition();
 updateTimestamp();
 setInterval(updateTimestamp, 500);
