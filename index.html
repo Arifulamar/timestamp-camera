@@ -4,50 +4,77 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1020" />
+  <meta name="color-scheme" content="dark" />
 
-  <title>Timestamp Camera Online | Foto dengan Tanggal & Waktu</title>
-  <meta name="description" content="Web app kamera timestamp untuk ponsel. Ambil foto langsung dari kamera dan tambahkan tanggal serta waktu secara otomatis tanpa instal aplikasi." />
-  <meta name="keywords" content="timestamp camera, kamera timestamp online, foto tanggal waktu, camera timestamp web, kamera ponsel online" />
-  <meta name="author" content="Timestamp Camera" />
-  <meta name="robots" content="index, follow" />
+  <title>Timestamp Camera GPS Online | Foto Tanggal, Waktu & Lokasi</title>
+  <meta name="description" content="Kamera timestamp GPS berbasis web untuk ponsel. Ambil foto dengan tanggal, waktu, koordinat, nama kegiatan, petugas, instansi, dan logo langsung di browser tanpa upload ke server." />
+  <meta name="keywords" content="timestamp camera gps, kamera timestamp online, foto gps tanggal waktu, kamera dokumentasi kegiatan, timestamp lokasi, watermark kamera ponsel" />
+  <meta name="author" content="Timestamp Camera GPS" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="canonical" href="https://example.com/" />
 
-  <meta property="og:title" content="Timestamp Camera Online" />
-  <meta property="og:description" content="Ambil foto dari kamera ponsel dan tambahkan timestamp otomatis." />
+  <meta property="og:title" content="Timestamp Camera GPS Online" />
+  <meta property="og:description" content="Foto dokumentasi dengan tanggal, waktu, GPS, identitas kegiatan, dan watermark logo langsung dari browser ponsel." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://example.com/" />
+  <meta property="og:locale" content="id_ID" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Timestamp Camera Online" />
-  <meta name="twitter:description" content="Foto dengan tanggal dan waktu langsung dari browser ponsel." />
+  <meta name="twitter:title" content="Timestamp Camera GPS Online" />
+  <meta name="twitter:description" content="Kamera dokumentasi ponsel dengan timestamp dan GPS tanpa instal aplikasi." />
 
   <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="style.css" />
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "Timestamp Camera Online",
-    "applicationCategory": "PhotographyApplication",
-    "operatingSystem": "Android, iOS, Windows, macOS",
-    "description": "Aplikasi web untuk mengambil foto dari kamera ponsel dengan tanggal dan waktu otomatis.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "IDR"
-    }
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Timestamp Camera GPS Online",
+        "applicationCategory": "PhotographyApplication",
+        "operatingSystem": "Android, iOS, Windows, macOS",
+        "description": "Aplikasi web untuk mengambil foto dengan tanggal, waktu, koordinat GPS, identitas kegiatan, dan watermark logo.",
+        "browserRequirements": "Requires JavaScript, HTTPS and camera permission",
+        "offers": {"@type":"Offer","price":"0","priceCurrency":"IDR"},
+        "featureList": ["Mobile camera", "Timestamp", "GPS coordinates", "Custom watermark", "Local gallery", "PWA"]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Apakah foto diunggah ke server?",
+            "acceptedAnswer": {"@type":"Answer","text":"Tidak. Foto diproses dan disimpan secara lokal di browser perangkat pengguna."}
+          },
+          {
+            "@type": "Question",
+            "name": "Mengapa kamera tidak bisa dibuka?",
+            "acceptedAnswer": {"@type":"Answer","text":"Akses kamera browser membutuhkan izin pengguna serta halaman HTTPS atau localhost."}
+          },
+          {
+            "@type": "Question",
+            "name": "Apakah koordinat GPS dapat ditambahkan ke foto?",
+            "acceptedAnswer": {"@type":"Answer","text":"Ya. Pengguna dapat meminta lokasi perangkat dan menambahkan latitude, longitude, serta akurasi ke watermark foto."}
+          }
+        ]
+      }
+    ]
   }
   </script>
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <span class="brand-dot"></span>
+      <span class="brand-dot" aria-hidden="true"></span>
       <div>
-        <h1>Timestamp Camera</h1>
-        <p>Foto dengan tanggal & waktu otomatis</p>
+        <h1>Timestamp Camera GPS</h1>
+        <p>Dokumentasi foto langsung dari browser</p>
       </div>
+      <button id="installApp" class="btn btn-small btn-secondary hidden" type="button">Instal App</button>
     </div>
   </header>
 
@@ -56,41 +83,97 @@
       <div class="section-heading">
         <div>
           <span class="eyebrow">KAMERA PONSEL</span>
-          <h2 id="camera-title">Ambil foto dengan timestamp</h2>
+          <h2 id="camera-title">Ambil foto dokumentasi</h2>
         </div>
-        <button id="switchCamera" class="btn btn-secondary" type="button" aria-label="Ganti kamera">
-          Ganti Kamera
-        </button>
+        <button id="switchCamera" class="btn btn-secondary" type="button" aria-label="Ganti kamera">↻ Ganti</button>
       </div>
 
       <div class="camera-stage" id="cameraStage">
         <video id="video" autoplay playsinline muted></video>
         <div class="live-badge"><span></span> LIVE</div>
+        <div id="logoPreview" class="logo-preview hidden" aria-hidden="true"><img alt="" /></div>
         <div id="timestampOverlay" class="timestamp-overlay" aria-live="polite"></div>
         <div id="cameraPlaceholder" class="camera-placeholder">
           <div class="camera-icon">📷</div>
           <h3>Kamera belum aktif</h3>
-          <p>Tekan tombol di bawah untuk memberikan izin kamera.</p>
+          <p>Tekan “Aktifkan Kamera”, lalu izinkan browser menggunakan kamera.</p>
         </div>
+        <div id="flash" class="flash" aria-hidden="true"></div>
       </div>
 
-      <div class="controls">
+      <div class="controls camera-controls">
         <button id="startCamera" class="btn btn-primary" type="button">Aktifkan Kamera</button>
         <button id="capturePhoto" class="btn btn-capture" type="button" disabled>
-          <span class="capture-ring"></span>
-          Ambil Foto
+          <span class="capture-ring"></span> Ambil Foto
         </button>
       </div>
 
       <div id="statusMessage" class="status" role="status">
-        Kamera membutuhkan HTTPS atau localhost agar dapat diakses oleh browser.
+        Kamera dan GPS membutuhkan HTTPS atau localhost.
       </div>
     </section>
 
-    <section class="settings-card" aria-labelledby="settings-title">
+    <section class="location-card panel" aria-labelledby="location-title">
       <div class="section-heading compact">
         <div>
-          <span class="eyebrow">PENGATURAN</span>
+          <span class="eyebrow">GPS & LOKASI</span>
+          <h2 id="location-title">Lokasi dokumentasi</h2>
+        </div>
+        <span id="gpsBadge" class="pill">GPS belum aktif</span>
+      </div>
+
+      <div class="location-actions">
+        <button id="getLocation" class="btn btn-primary" type="button">⌖ Ambil GPS</button>
+        <button id="watchLocation" class="btn btn-secondary" type="button">Pantau GPS</button>
+        <a id="openMap" class="btn btn-secondary disabled-link" href="#" target="_blank" rel="noopener">Buka Peta</a>
+      </div>
+
+      <div class="gps-grid" aria-live="polite">
+        <div><span>Latitude</span><strong id="latitude">—</strong></div>
+        <div><span>Longitude</span><strong id="longitude">—</strong></div>
+        <div><span>Akurasi</span><strong id="accuracy">—</strong></div>
+        <div><span>Update</span><strong id="gpsUpdated">—</strong></div>
+      </div>
+
+      <label>
+        Nama lokasi / alamat
+        <input id="locationName" type="text" maxlength="100" placeholder="Contoh: SMA Negeri 1 Sabang, Kota Sabang" autocomplete="street-address" />
+        <small class="field-help">Opsional. Isi manual agar nama lokasi ikut tercetak pada foto.</small>
+      </label>
+    </section>
+
+    <section class="settings-card panel" aria-labelledby="identity-title">
+      <div class="section-heading compact">
+        <div>
+          <span class="eyebrow">IDENTITAS DOKUMENTASI</span>
+          <h2 id="identity-title">Informasi pada foto</h2>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          Instansi / sekolah
+          <input id="organization" type="text" maxlength="80" placeholder="Contoh: SMA Negeri 1 Sabang" />
+        </label>
+        <label>
+          Nama kegiatan
+          <input id="activity" type="text" maxlength="100" placeholder="Contoh: Monitoring Kegiatan Sekolah" />
+        </label>
+        <label>
+          Petugas / fotografer
+          <input id="officer" type="text" maxlength="80" placeholder="Contoh: Tim Dokumentasi" />
+        </label>
+        <label>
+          Catatan singkat
+          <input id="note" type="text" maxlength="100" placeholder="Opsional" />
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-card panel" aria-labelledby="settings-title">
+      <div class="section-heading compact">
+        <div>
+          <span class="eyebrow">WATERMARK</span>
           <h2 id="settings-title">Tampilan timestamp</h2>
         </div>
       </div>
@@ -104,9 +187,8 @@
             <option value="iso">2026-09-05</option>
           </select>
         </label>
-
         <label>
-          Posisi timestamp
+          Posisi watermark
           <select id="timestampPosition">
             <option value="bottom-left">Kiri bawah</option>
             <option value="bottom-right">Kanan bawah</option>
@@ -114,13 +196,37 @@
             <option value="top-right">Kanan atas</option>
           </select>
         </label>
+        <label>
+          Kualitas JPG
+          <select id="imageQuality">
+            <option value="0.98">Sangat tinggi</option>
+            <option value="0.92" selected>Tinggi</option>
+            <option value="0.82">Hemat ukuran</option>
+          </select>
+        </label>
+        <label>
+          Logo instansi
+          <input id="logoInput" class="file-input" type="file" accept="image/png,image/jpeg,image/webp" />
+          <small class="field-help">Disarankan PNG transparan.</small>
+        </label>
+      </div>
 
+      <div class="toggle-grid">
         <label class="toggle-row">
-          <span>
-            Tampilkan detik
-            <small>Contoh: 07:47:23</small>
-          </span>
+          <span>Tampilkan detik<small>Contoh: 07:47:23</small></span>
           <input id="showSeconds" type="checkbox" checked />
+        </label>
+        <label class="toggle-row">
+          <span>Tampilkan GPS<small>Latitude, longitude & akurasi</small></span>
+          <input id="showGps" type="checkbox" checked />
+        </label>
+        <label class="toggle-row">
+          <span>Tampilkan identitas<small>Instansi, kegiatan & petugas</small></span>
+          <input id="showIdentity" type="checkbox" checked />
+        </label>
+        <label class="toggle-row">
+          <span>Simpan ke galeri lokal<small>Maksimal 12 foto terakhir</small></span>
+          <input id="saveGallery" type="checkbox" checked />
         </label>
       </div>
     </section>
@@ -129,42 +235,57 @@
       <div class="section-heading">
         <div>
           <span class="eyebrow">HASIL FOTO</span>
-          <h2 id="result-title">Foto siap disimpan</h2>
+          <h2 id="result-title">Foto siap digunakan</h2>
         </div>
       </div>
 
-      <img id="capturedImage" alt="Hasil foto dengan timestamp" />
+      <img id="capturedImage" alt="Hasil foto dengan timestamp GPS" />
 
       <div class="controls result-controls">
-        <a id="downloadPhoto" class="btn btn-primary" href="#" download="timestamp-photo.jpg">Unduh Foto</a>
-        <button id="retakePhoto" class="btn btn-secondary" type="button">Ambil Ulang</button>
+        <a id="downloadPhoto" class="btn btn-primary" href="#" download="timestamp-photo.jpg">↓ Unduh Foto</a>
+        <button id="sharePhoto" class="btn btn-secondary" type="button">↗ Bagikan</button>
+        <button id="retakePhoto" class="btn btn-secondary" type="button">Ambil Lagi</button>
       </div>
     </section>
 
+    <section class="gallery-card panel" aria-labelledby="gallery-title">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">GALERI LOKAL</span>
+          <h2 id="gallery-title">Foto terakhir</h2>
+        </div>
+        <button id="clearGallery" class="btn btn-small btn-secondary" type="button">Hapus Semua</button>
+      </div>
+      <p class="privacy-note">Foto di galeri ini tersimpan hanya di browser perangkat ini.</p>
+      <div id="gallery" class="gallery-grid"></div>
+      <div id="emptyGallery" class="empty-state">Belum ada foto tersimpan.</div>
+    </section>
+
     <section class="seo-content">
-      <h2>Kamera timestamp online untuk ponsel</h2>
+      <h2>Kamera timestamp GPS online untuk dokumentasi</h2>
       <p>
-        Timestamp Camera adalah aplikasi web ringan untuk mengambil foto langsung dari kamera ponsel dan menambahkan tanggal serta waktu pada foto secara otomatis. Tidak perlu instal aplikasi tambahan.
+        Timestamp Camera GPS membantu membuat foto dokumentasi langsung dari browser ponsel dengan tanggal, waktu, koordinat GPS, nama lokasi, identitas kegiatan, petugas, dan logo instansi. Cocok untuk dokumentasi sekolah, monitoring kegiatan, pekerjaan lapangan, inventaris, survei, dan laporan kegiatan.
       </p>
       <div class="feature-grid">
-        <article>
-          <h3>📱 Mobile Friendly</h3>
-          <p>Antarmuka responsif untuk Android dan iPhone serta mendukung kamera depan dan belakang.</p>
-        </article>
-        <article>
-          <h3>⏱️ Timestamp Otomatis</h3>
-          <p>Tanggal dan waktu mengikuti perangkat pengguna dan tertanam langsung pada hasil foto.</p>
-        </article>
-        <article>
-          <h3>🔒 Privasi</h3>
-          <p>Foto diproses di browser. Aplikasi ini tidak mengunggah foto ke server.</p>
-        </article>
+        <article><h3>📱 Kamera Ponsel</h3><p>Mendukung kamera depan dan belakang pada browser modern Android dan iPhone.</p></article>
+        <article><h3>⌖ GPS & Lokasi</h3><p>Koordinat dan tingkat akurasi dapat dicantumkan langsung pada hasil foto.</p></article>
+        <article><h3>🏷️ Watermark Lengkap</h3><p>Tambahkan instansi, kegiatan, petugas, catatan, serta logo organisasi.</p></article>
+        <article><h3>🔒 Privasi Lokal</h3><p>Foto diproses di perangkat dan tidak dikirim ke server oleh aplikasi ini.</p></article>
+        <article><h3>📲 PWA</h3><p>Dapat dipasang ke layar utama pada browser yang mendukung instalasi web app.</p></article>
+        <article><h3>⚡ Ringan & SEO Friendly</h3><p>Tanpa framework besar, dilengkapi metadata SEO, Open Graph, JSON-LD, sitemap, dan robots.</p></article>
+      </div>
+
+      <div class="faq">
+        <h2>Pertanyaan umum</h2>
+        <details><summary>Apakah aplikasi ini gratis?</summary><p>Ya. Aplikasi berjalan sebagai web statis dan dapat di-host di GitHub Pages.</p></details>
+        <details><summary>Apakah GPS selalu akurat?</summary><p>Akurasi bergantung pada perangkat, izin lokasi, sinyal GPS, Wi-Fi, dan kondisi lingkungan.</p></details>
+        <details><summary>Apakah bisa digunakan tanpa internet?</summary><p>Setelah aset utama pernah dimuat, service worker menyediakan dukungan offline dasar. Kamera dan GPS tetap bergantung pada kemampuan perangkat serta izin browser.</p></details>
       </div>
     </section>
   </main>
 
   <footer>
-    <p>Timestamp Camera Online · Berjalan langsung di browser</p>
+    <p>Timestamp Camera GPS · Kamera, GPS, watermark & galeri lokal</p>
   </footer>
 
   <canvas id="photoCanvas" hidden></canvas>

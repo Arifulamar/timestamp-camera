@@ -1,33 +1,41 @@
-# Timestamp Camera Online
+# Timestamp Camera GPS Online v2
 
-Web app ringan untuk mengambil foto dari kamera ponsel dan menambahkan timestamp tanggal + waktu langsung ke gambar.
+Web app statis dan mobile-first untuk foto dokumentasi dengan timestamp, GPS, identitas kegiatan, dan watermark logo. Tidak membutuhkan backend.
 
-## Fitur
-- Kamera belakang/depan
-- Timestamp live
-- Timestamp tertanam pada hasil foto
-- Format tanggal dapat dipilih
-- Posisi timestamp dapat dipilih
-- Download JPG
-- Responsive mobile
-- SEO meta tags + JSON-LD
-- PWA sederhana
-- Tidak mengunggah foto ke server
+## Fitur utama
+- Kamera belakang/depan via `getUserMedia`
+- Timestamp tanggal + jam real-time
+- GPS latitude, longitude, akurasi, dan link Google Maps
+- Nama lokasi/alamat manual
+- Instansi/sekolah, kegiatan, petugas, dan catatan
+- Upload logo PNG/JPG/WebP sebagai watermark
+- Watermark tertanam ke file JPG hasil foto
+- Pilihan posisi watermark dan kualitas JPG
+- Tombol Share memakai Web Share API bila tersedia
+- Galeri lokal maksimal 12 foto menggunakan IndexedDB
+- Pengaturan tersimpan menggunakan localStorage
+- PWA + offline asset cache
+- SEO meta tags, Open Graph, FAQ Schema, WebApplication Schema
+- robots.txt + sitemap.xml
+- Tidak ada upload foto ke server
 
-## Penting
-Akses kamera browser membutuhkan HTTPS atau localhost.
+## Persyaratan browser
+Kamera dan geolocation membutuhkan **HTTPS** atau `localhost`, serta izin pengguna. GitHub Pages sudah menggunakan HTTPS.
 
 ## Deploy GitHub Pages
-1. Upload semua file ke repository GitHub.
-2. Buka Settings > Pages.
-3. Pilih Deploy from a branch.
+1. Upload seluruh file ke repository GitHub.
+2. Masuk ke **Settings > Pages**.
+3. Pilih **Deploy from a branch**.
 4. Pilih branch `main` dan folder `/root`.
-5. Setelah aktif, buka URL GitHub Pages dari ponsel.
+5. Buka URL GitHub Pages dari ponsel.
 
-## SEO
-Ganti seluruh `https://example.com/` pada:
-- index.html
-- robots.txt
-- sitemap.xml
+## SEO sebelum publikasi
+Ganti semua `https://example.com/` pada:
+- `index.html`
+- `robots.txt`
+- `sitemap.xml`
 
-dengan domain asli Anda.
+dengan domain final Anda.
+
+## Privasi
+Aplikasi tidak mengirim foto atau data GPS ke server aplikasi. Foto galeri tersimpan pada IndexedDB browser lokal. Tombol “Buka Peta” membuka Google Maps pada tab baru setelah pengguna meminta GPS.
