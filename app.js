@@ -2,6 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const video = $('video');
+const cameraStage = $('cameraStage');
 const canvas = $('photoCanvas');
 const ctx = canvas.getContext('2d');
 const startCameraBtn = $('startCamera');
@@ -152,16 +153,15 @@ function describeAngle(angle) {
 }
 
 function getWatermarkAngle() {
-  return watermarkRotationMode?.value === 'auto'
-    ? currentOrientationAngle
-    : normalizeAngle(Number(watermarkRotationMode?.value || 0));
-}
+  // AUTO tidak perlu memutar teks.
+  // Canvas foto akan mengikuti orientasi kamera.
+  if (watermarkRotationMode?.value === 'auto') {
+    return 0;
+  }
 
-function getOverlayTransformOrigin(position) {
-  if (position === 'top-left') return 'left top';
-  if (position === 'top-right') return 'right top';
-  if (position === 'bottom-left') return 'left bottom';
-  return 'right bottom';
+  return normalizeAngle(
+    Number(watermarkRotationMode?.value || 0)
+  );
 }
 
 function updateOverlayRotation() {
@@ -459,55 +459,140 @@ function buildFilename(date = new Date()) {
   const slug = (activity.value || organization.value || 'timestamp').trim().toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 32) || 'timestamp';
   return `${slug}-${y}${m}${d}-${hh}${mm}${ss}.jpg`;
 }
+function drawVideoCover(video, ctx, targetWidth, targetHeight, mirror = false) {
+  const videoWidth = video.videoWidth;
+  const videoHeight = video.videoHeight;
 
+  const sourceRatio = videoWidth / videoHeight;
+  const targetRatio = targetWidth / targetHeight;
+
+  let sx = 0;
+  let sy = 0;
+  let sw = videoWidth;
+  let sh = videoHeight;
+
+  // Sama seperti object-fit: cover
+  if (sourceRatio > targetRatio) {
+    sw = videoHeight * targetRatio;
+    sx = (videoWidth - sw) / 2;
+  } else {
+    sh = videoWidth / targetRatio;
+    sy = (videoHeight - sh) / 2;
+  }
+
+  ctx.save();
+
+  if (mirror) {
+    ctx.translate(targetWidth, 0);
+    ctx.scale(-1, 1);
+  }
+
+  ctx.drawImage(
+    video,
+    sx,
+    sy,
+    sw,
+    sh,
+    0,
+    0,
+    targetWidth,
+    targetHeight
+  );
+
+  ctx.restore();
+}
 function capturePhoto() {
-   if (!stream || !video.videoWidth || !video.videoHeight) return;
-
-  // Ambil orientasi persis ketika tombol foto ditekan
-  refreshOrientation();
+  if (!stream || !video.videoWidth || !video.videoHeight) {
+    return;
+  }
 
   const capturedAt = new Date();
 
   triggerFlash();
 
+  // Ambil orientasi aktual tampilan kamera
+  const stageRect = cameraStage.getBoundingClientRect();
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  const isLandscape =
+    stageRect.width > stageRect.height;
 
-  if (facingMode === 'user') {
-    ctx.save();
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    ctx.restore();
+  // Gunakan resolusi cukup tinggi
+  const maxDimension = Math.max(
+    video.videoWidth,
+    video.videoHeight
+  );
+
+  if (isLandscape) {
+    // LANDSCAPE
+    canvas.width = maxDimension;
+    canvas.height = Math.round(
+      maxDimension * (stageRect.height / stageRect.width)
+    );
   } else {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // PORTRAIT
+    canvas.height = maxDimension;
+    canvas.width = Math.round(
+      maxDimension * (stageRect.width / stageRect.height)
+    );
   }
 
-  drawWatermark(buildOverlayLines(capturedAt));
+  // Gambar kamera sesuai orientasi layar
+  drawVideoCover(
+    video,
+    ctx,
+    canvas.width,
+    canvas.height,
+    facingMode === 'user'
+  );
+
+  // Watermark digambar setelah foto sudah mengikuti orientasi
+  drawWatermark(
+    buildOverlayLines(capturedAt)
+  );
+
   drawLogo();
 
-  canvas.toBlob(async (blob) => {
-    if (!blob) return;
-    if (lastPhotoUrl) URL.revokeObjectURL(lastPhotoUrl);
-    lastPhotoBlob = blob;
-    lastPhotoUrl = URL.createObjectURL(blob);
-    lastFilename = buildFilename(capturedAt);
+  canvas.toBlob(
+    async (blob) => {
+      if (!blob) return;
 
-    capturedImage.src = lastPhotoUrl;
-    downloadPhoto.href = lastPhotoUrl;
-    downloadPhoto.download = lastFilename;
-    resultCard.classList.remove('hidden');
+      if (lastPhotoUrl) {
+        URL.revokeObjectURL(lastPhotoUrl);
+      }
 
-    if (saveGallery.checked) {
-      try {
-        await addPhotoToGallery({ blob, filename: lastFilename, createdAt: capturedAt.getTime() });
-        await renderGallery();
-      } catch (_) {}
-    }
+      lastPhotoBlob = blob;
+      lastPhotoUrl = URL.createObjectURL(blob);
+      lastFilename = buildFilename(capturedAt);
 
-    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 'image/jpeg', Number(imageQuality.value));
+      capturedImage.src = lastPhotoUrl;
+
+      downloadPhoto.href = lastPhotoUrl;
+      downloadPhoto.download = lastFilename;
+
+      resultCard.classList.remove('hidden');
+
+      if (saveGallery.checked) {
+        try {
+          await addPhotoToGallery({
+            blob,
+            filename: lastFilename,
+            createdAt: capturedAt.getTime()
+          });
+
+          await renderGallery();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      resultCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    },
+    'image/jpeg',
+    Number(imageQuality.value)
+  );
 }
 
 async function sharePhoto() {
