@@ -2,678 +2,386 @@
 
 const $ = (id) => document.getElementById(id);
 const video = $('video');
-const canvas = $('photoCanvas');
-const ctx = canvas.getContext('2d');
-const startCameraBtn = $('startCamera');
-const switchCameraBtn = $('switchCamera');
-const capturePhotoBtn = $('capturePhoto');
-const timestampOverlay = $('timestampOverlay');
+const cameraStage = $('cameraStage');
 const cameraPlaceholder = $('cameraPlaceholder');
-const statusMessage = $('statusMessage');
-const capturedImage = $('capturedImage');
-const downloadPhoto = $('downloadPhoto');
-const sharePhotoBtn = $('sharePhoto');
-const retakePhoto = $('retakePhoto');
-const resultCard = $('resultCard');
-const dateFormat = $('dateFormat');
-const timestampPosition = $('timestampPosition');
-const watermarkRotationMode = $('watermarkRotationMode');
-const showSeconds = $('showSeconds');
-const showGps = $('showGps');
-const showIdentity = $('showIdentity');
-const imageQuality = $('imageQuality');
-const saveGallery = $('saveGallery');
-const organization = $('organization');
-const activity = $('activity');
-const officer = $('officer');
-const note = $('note');
-const locationName = $('locationName');
-const getLocationBtn = $('getLocation');
-const watchLocationBtn = $('watchLocation');
-const openMap = $('openMap');
-const gpsBadge = $('gpsBadge');
-const latitudeEl = $('latitude');
-const longitudeEl = $('longitude');
-const accuracyEl = $('accuracy');
-const gpsUpdatedEl = $('gpsUpdated');
-const logoInput = $('logoInput');
-const logoPreview = $('logoPreview');
+const cameraState = $('cameraState');
+const startCameraBtn = $('startCamera');
+const capturePhotoBtn = $('capturePhoto');
+const switchCameraBtn = $('switchCamera');
+const heroCameraBtn = $('heroCamera');
+const liveStamp = $('liveStamp');
 const flash = $('flash');
-const gallery = $('gallery');
-const emptyGallery = $('emptyGallery');
-const clearGalleryBtn = $('clearGallery');
+const cameraTab = $('cameraTab');
+const uploadTab = $('uploadTab');
+const cameraMode = $('cameraMode');
+const uploadMode = $('uploadMode');
+const photoInput = $('photoInput');
+const chooseFilesBtn = $('chooseFiles');
+const addMorePhotosBtn = $('addMorePhotos');
+const downloadSelectedBtn = $('downloadSelected');
+const dropZone = $('dropZone');
+const uploadPreviewWrap = $('uploadPreviewWrap');
+const uploadCanvas = $('uploadCanvas');
+const uploadCtx = uploadCanvas.getContext('2d');
+const currentFileName = $('currentFileName');
+const photoCounter = $('photoCounter');
+const prevPhoto = $('prevPhoto');
+const nextPhoto = $('nextPhoto');
+const workCanvas = $('workCanvas');
+const workCtx = workCanvas.getContext('2d');
+const resultPanel = $('resultPanel');
+const resultImage = $('resultImage');
+const downloadCurrent = $('downloadCurrent');
+const shareCurrent = $('shareCurrent');
+const downloadAllBtn = $('downloadAll');
+const batchCount = $('batchCount');
+const capturedAt = $('capturedAt');
+const clock24 = $('clock24');
+const dateFormats = $('dateFormats');
+const useLocationBtn = $('useLocation');
+const address = $('address');
+const latitude = $('latitude');
+const longitude = $('longitude');
+const gpsInfo = $('gpsInfo');
+const showAddress = $('showAddress');
+const showCoordinates = $('showCoordinates');
+const jobNote = $('jobNote');
+const showNote = $('showNote');
+const accentBar = $('accentBar');
+const stampSize = $('stampSize');
+const watermark = $('watermark');
+const positionGrid = $('positionGrid');
+const saveDefaultsBtn = $('saveDefaults');
+const resetDefaultsBtn = $('resetDefaults');
 const installAppBtn = $('installApp');
-const orientationHint = $('orientationHint');
 
 let stream = null;
 let facingMode = 'environment';
-let lastPhotoUrl = null;
-let lastPhotoBlob = null;
-let lastFilename = 'timestamp-photo.jpg';
-let currentLocation = null;
-let watchId = null;
-let logoImage = null;
+let mode = 'camera';
+let dateFormat = 'dmy';
+let stampColor = 'dark';
+let stampPosition = 'bottom-left';
+let uploads = [];
+let currentUploadIndex = 0;
+let lastResultBlob = null;
+let lastResultUrl = null;
+let lastResultName = 'timestamp-photo.jpg';
 let deferredInstallPrompt = null;
-let dbPromise = null;
-let currentOrientationAngle = 0;
+let gpsAccuracy = null;
+let manualTime = false;
 
-const PREF_KEYS = [
-  'dateFormat', 'timestampPosition', 'watermarkRotationMode', 'showSeconds', 'showGps', 'showIdentity',
-  'imageQuality', 'saveGallery', 'organization', 'activity', 'officer', 'note', 'locationName'
-];
+const DEFAULTS_KEY = 'kameratimestamp-defaults-v1';
+const PALETTES = {
+  dark: { bg: 'rgba(0,0,0,.74)', text: '#ffffff', accent: '#d8ef72' },
+  light: { bg: 'rgba(255,255,255,.88)', text: '#151515', accent: '#214f3b' },
+  blue: { bg: 'rgba(22,73,101,.88)', text: '#ffffff', accent: '#a9ddff' },
+  green: { bg: 'rgba(24,76,54,.9)', text: '#ffffff', accent: '#d8ef72' }
+};
 
-function formatDate(date = new Date()) {
-  if (dateFormat.value === 'id-long') {
-    return new Intl.DateTimeFormat('id-ID', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    }).format(date);
-  }
-  if (dateFormat.value === 'iso') {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  return new Intl.DateTimeFormat('id-ID', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  }).format(date);
+function pad(n) { return String(n).padStart(2, '0'); }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function localDateTimeValue(date = new Date()) {
+  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return shifted.toISOString().slice(0, 16);
 }
-
-function formatTime(date = new Date()) {
-  return new Intl.DateTimeFormat('id-ID', {
-    hour: '2-digit', minute: '2-digit',
-    second: showSeconds.checked ? '2-digit' : undefined,
-    hour12: false
-  }).format(date).replaceAll('.', ':');
+function getStampDate() {
+  if (!manualTime) return new Date();
+  const d = capturedAt.value ? new Date(capturedAt.value) : new Date();
+  return Number.isNaN(d.getTime()) ? new Date() : d;
 }
-
-function safeLine(label, value) {
-  const clean = String(value || '').replace(/\s+/g, ' ').trim();
-  return clean ? `${label}${clean}` : '';
+function formatDate(date) {
+  if (dateFormat === 'mdy') return `${pad(date.getMonth()+1)}/${pad(date.getDate())}/${String(date.getFullYear()).slice(-2)}`;
+  if (dateFormat === 'iso') return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+  if (dateFormat === 'long') return new Intl.DateTimeFormat('id-ID',{day:'numeric',month:'short',year:'numeric'}).format(date);
+  return `${pad(date.getDate())}/${pad(date.getMonth()+1)}/${String(date.getFullYear()).slice(-2)}`;
 }
-
-function buildOverlayLines(date = new Date()) {
-  const lines = [`${formatDate(date)} · ${formatTime(date)}`];
-
-  if (showIdentity.checked) {
-    const identity = [organization.value.trim(), activity.value.trim()].filter(Boolean).join(' · ');
-    if (identity) lines.push(identity);
-    if (officer.value.trim()) lines.push(safeLine('Petugas: ', officer.value));
-  }
-
-  if (locationName.value.trim()) lines.push(`📍 ${locationName.value.trim()}`);
-
-  if (showGps.checked && currentLocation) {
-    lines.push(`GPS ${currentLocation.lat.toFixed(6)}, ${currentLocation.lon.toFixed(6)} · ±${Math.round(currentLocation.accuracy)} m`);
-  }
-
-  if (note.value.trim()) lines.push(note.value.trim());
+function formatTime(date) {
+  if (clock24.checked) return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(date);
+}
+function numericCoord(value) {
+  const n = Number(String(value).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+function buildStampLines() {
+  const d = getStampDate();
+  const lines = [`${formatDate(d)} · ${formatTime(d)}`];
+  if (watermark.value.trim()) lines.push(watermark.value.trim());
+  const lat = numericCoord(latitude.value);
+  const lon = numericCoord(longitude.value);
+  if (showCoordinates.checked && lat !== null && lon !== null) lines.push(`${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+  if (showAddress.checked && address.value.trim()) lines.push(address.value.trim());
+  if (showNote.checked && jobNote.value.trim()) lines.push(jobNote.value.trim());
   return lines;
 }
 
-function normalizeAngle(angle) {
-  const raw = Number(angle);
-  if (!Number.isFinite(raw)) return 0;
-  const normalized = ((raw % 360) + 360) % 360;
-  if (normalized === 90) return 90;
-  if (normalized === 180) return 180;
-  if (normalized === 270) return -90;
-  return 0;
-}
-
-function readDeviceOrientationAngle() {
-  const type = screen.orientation?.type || '';
-  if (type.startsWith('portrait-primary')) return 0;
-  if (type.startsWith('portrait-secondary')) return 180;
-  if (type.startsWith('landscape-primary')) return 90;
-  if (type.startsWith('landscape-secondary')) return -90;
-
-  const rawAngle = typeof screen.orientation?.angle === 'number'
-    ? screen.orientation.angle
-    : (typeof window.orientation === 'number' ? window.orientation : null);
-
-  if (rawAngle !== null) return normalizeAngle(rawAngle);
-  return window.innerWidth > window.innerHeight ? 90 : 0;
-}
-
-function describeAngle(angle) {
-  if (angle === 90) return 'landscape kiri (90°)';
-  if (angle === -90) return 'landscape kanan (-90°)';
-  if (angle === 180) return 'potret terbalik (180°)';
-  return 'potret normal (0°)';
-}
-
-function getWatermarkAngle() {
-  return watermarkRotationMode?.value === 'auto'
-    ? currentOrientationAngle
-    : normalizeAngle(Number(watermarkRotationMode?.value || 0));
-}
-
-function getOverlayTransformOrigin(position) {
-  if (position === 'top-left') return 'left top';
-  if (position === 'top-right') return 'right top';
-  if (position === 'bottom-left') return 'left bottom';
-  return 'right bottom';
-}
-
-function updateOverlayRotation() {
-  const angle = getWatermarkAngle();
-  timestampOverlay.style.transformOrigin = getOverlayTransformOrigin(timestampPosition.value);
-  timestampOverlay.style.transform = angle ? `rotate(${angle}deg)` : 'none';
-
-  if (orientationHint) {
-    const modeText = watermarkRotationMode?.value === 'auto'
-      ? `otomatis (${describeAngle(angle)})`
-      : `manual (${angle}°)`;
-    orientationHint.textContent = `Orientasi perangkat: ${describeAngle(currentOrientationAngle)} · Watermark: ${modeText}`;
-  }
-}
-
-function refreshOrientation() {
-  currentOrientationAngle = readDeviceOrientationAngle();
-  updateOverlayRotation();
-}
-
-function updateOverlayPosition() {
-  const pos = timestampPosition.value;
-  logoPreview.style.left = 'auto';
-  logoPreview.style.right = pos === 'top-right' ? 'auto' : '16px';
-  if (pos === 'top-right') logoPreview.style.left = '16px';
-  timestampOverlay.style.left = 'auto';
-  timestampOverlay.style.right = 'auto';
-  timestampOverlay.style.top = 'auto';
-  timestampOverlay.style.bottom = 'auto';
-  const space = '16px';
-  if (pos.includes('left')) timestampOverlay.style.left = space;
-  if (pos.includes('right')) timestampOverlay.style.right = space;
-  if (pos.includes('top')) timestampOverlay.style.top = space;
-  if (pos.includes('bottom')) timestampOverlay.style.bottom = space;
-  updateOverlayRotation();
-}
-
-function updateTimestamp() {
-  timestampOverlay.textContent = buildOverlayLines(new Date()).join('\n');
-}
-
-function savePrefs() {
-  const prefs = {};
-  PREF_KEYS.forEach((key) => {
-    const el = $(key);
-    if (!el) return;
-    prefs[key] = el.type === 'checkbox' ? el.checked : el.value;
-  });
-  localStorage.setItem('timestamp-camera-prefs-v2', JSON.stringify(prefs));
-}
-
-function loadPrefs() {
-  try {
-    const prefs = JSON.parse(localStorage.getItem('timestamp-camera-prefs-v2') || '{}');
-    PREF_KEYS.forEach((key) => {
-      const el = $(key);
-      if (!el || !(key in prefs)) return;
-      if (el.type === 'checkbox') el.checked = Boolean(prefs[key]);
-      else el.value = prefs[key];
-    });
-  } catch (_) {}
+function setMode(nextMode) {
+  mode = nextMode;
+  const cameraActive = nextMode === 'camera';
+  cameraTab.classList.toggle('active', cameraActive);
+  uploadTab.classList.toggle('active', !cameraActive);
+  cameraMode.classList.toggle('hidden', !cameraActive);
+  uploadMode.classList.toggle('hidden', cameraActive);
+  if (cameraActive) updateLiveStamp();
+  else renderUploadPreview();
 }
 
 async function stopCamera() {
-  if (stream) stream.getTracks().forEach((track) => track.stop());
+  if (stream) stream.getTracks().forEach(track => track.stop());
   stream = null;
   video.srcObject = null;
 }
-
 async function startCamera() {
   try {
-    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Browser ini tidak mendukung akses kamera');
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Browser tidak mendukung akses kamera');
     await stopCamera();
-
-    const constraints = {
-      audio: false,
-      video: {
-        facingMode: { ideal: facingMode },
-        width: { ideal: 2560 },
-        height: { ideal: 1440 }
-      }
-    };
-
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio:false,
+      video:{facingMode:{ideal:facingMode},width:{ideal:2560},height:{ideal:1440}}
+    });
     video.srcObject = stream;
     await video.play();
-
     cameraPlaceholder.classList.add('hidden');
+    cameraState.textContent = facingMode === 'environment' ? 'KAMERA BELAKANG · LIVE' : 'KAMERA DEPAN · LIVE';
     capturePhotoBtn.disabled = false;
-    startCameraBtn.textContent = 'Restart Kamera';
-    statusMessage.textContent = `Kamera ${facingMode === 'environment' ? 'belakang' : 'depan'} aktif. Foto diproses langsung di perangkat.`;
-    statusMessage.className = 'status success';
-  } catch (error) {
+    startCameraBtn.textContent = 'Restart kamera';
+    updateLiveStamp();
+  } catch (err) {
     capturePhotoBtn.disabled = true;
     cameraPlaceholder.classList.remove('hidden');
-    statusMessage.textContent = `Kamera tidak dapat dibuka: ${cameraErrorMessage(error)}.`;
-    statusMessage.className = 'status error';
+    cameraState.textContent = err?.name === 'NotAllowedError' ? 'IZIN KAMERA DITOLAK' : 'KAMERA TIDAK TERSEDIA';
   }
 }
-
-function cameraErrorMessage(error) {
-  if (error?.name === 'NotAllowedError') return 'izin kamera ditolak. Aktifkan izin kamera pada browser';
-  if (error?.name === 'NotFoundError') return 'kamera tidak ditemukan pada perangkat';
-  if (error?.name === 'NotReadableError') return 'kamera sedang digunakan aplikasi lain';
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost') return 'akses kamera membutuhkan HTTPS atau localhost';
-  return error?.message || 'terjadi kesalahan yang tidak diketahui';
-}
-
 async function switchCamera() {
   facingMode = facingMode === 'environment' ? 'user' : 'environment';
   if (stream) await startCamera();
-  else statusMessage.textContent = `Kamera dipilih: ${facingMode === 'environment' ? 'belakang' : 'depan'}. Tekan Aktifkan Kamera.`;
+}
+function drawVideoCover(ctx, targetW, targetH) {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const sourceRatio = vw / vh, targetRatio = targetW / targetH;
+  let sx=0, sy=0, sw=vw, sh=vh;
+  if (sourceRatio > targetRatio) { sw = vh * targetRatio; sx = (vw - sw) / 2; }
+  else { sh = vw / targetRatio; sy = (vh - sh) / 2; }
+  ctx.save();
+  if (facingMode === 'user') { ctx.translate(targetW,0); ctx.scale(-1,1); }
+  ctx.drawImage(video,sx,sy,sw,sh,0,0,targetW,targetH);
+  ctx.restore();
+}
+function flashNow() {
+  flash.classList.remove('active'); void flash.offsetWidth; flash.classList.add('active');
+}
+async function capturePhoto() {
+  if (!stream || !video.videoWidth) return;
+  const rect = cameraStage.getBoundingClientRect();
+  const ratio = rect.width / rect.height;
+  const longSide = clamp(Math.max(video.videoWidth, video.videoHeight), 1280, 2560);
+  if (ratio >= 1) { workCanvas.width = longSide; workCanvas.height = Math.round(longSide / ratio); }
+  else { workCanvas.height = longSide; workCanvas.width = Math.round(longSide * ratio); }
+  workCtx.clearRect(0,0,workCanvas.width,workCanvas.height);
+  drawVideoCover(workCtx,workCanvas.width,workCanvas.height);
+  drawStamp(workCtx,workCanvas.width,workCanvas.height,buildStampLines());
+  flashNow();
+  const blob = await canvasToBlob(workCanvas, .94);
+  if (blob) showResult(blob, makeFilename('kamera'));
 }
 
-function requestLocation(single = true) {
-  if (!navigator.geolocation) {
-    gpsBadge.textContent = 'GPS tidak didukung';
-    return;
-  }
-
-  const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
-  gpsBadge.textContent = 'Mencari GPS…';
-
-  if (single) {
-    navigator.geolocation.getCurrentPosition(handlePosition, handleLocationError, options);
-  } else {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-      watchLocationBtn.textContent = 'Pantau GPS';
-      gpsBadge.textContent = currentLocation ? 'GPS tersimpan' : 'GPS belum aktif';
-      return;
-    }
-    watchId = navigator.geolocation.watchPosition(handlePosition, handleLocationError, options);
-    watchLocationBtn.textContent = 'Stop Pantau';
-  }
+function updateLiveStamp() {
+  const palette = PALETTES[stampColor];
+  liveStamp.textContent = buildStampLines().join('\n');
+  liveStamp.style.background = palette.bg;
+  liveStamp.style.color = palette.text;
+  liveStamp.style.borderLeft = accentBar.checked ? `3px solid ${palette.accent}` : '0';
+  liveStamp.style.left = liveStamp.style.right = liveStamp.style.top = liveStamp.style.bottom = 'auto';
+  const inset = '14px';
+  if (stampPosition.includes('left')) liveStamp.style.left = inset; else liveStamp.style.right = inset;
+  if (stampPosition.includes('top')) liveStamp.style.top = inset; else liveStamp.style.bottom = inset;
+  const scale = Number(stampSize.value) / 85;
+  const px = clamp(cameraStage.clientWidth * .022 * scale, 7, 15);
+  liveStamp.style.fontSize = `${px}px`;
+  liveStamp.style.padding = `${Math.round(6*scale)}px ${Math.round(8*scale)}px`;
 }
 
-function handlePosition(position) {
-  currentLocation = {
-    lat: position.coords.latitude,
-    lon: position.coords.longitude,
-    accuracy: position.coords.accuracy,
-    timestamp: position.timestamp
-  };
-  latitudeEl.textContent = currentLocation.lat.toFixed(6);
-  longitudeEl.textContent = currentLocation.lon.toFixed(6);
-  accuracyEl.textContent = `±${Math.round(currentLocation.accuracy)} m`;
-  gpsUpdatedEl.textContent = new Date(position.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replaceAll('.', ':');
-  gpsBadge.textContent = currentLocation.accuracy <= 30 ? 'GPS akurat' : 'GPS aktif';
-  gpsBadge.classList.add('active');
-  openMap.href = `https://www.google.com/maps?q=${currentLocation.lat},${currentLocation.lon}`;
-  openMap.classList.remove('disabled-link');
-  updateTimestamp();
-}
-
-function handleLocationError(error) {
-  const messages = {
-    1: 'Izin lokasi ditolak',
-    2: 'Lokasi tidak tersedia',
-    3: 'Pencarian GPS timeout'
-  };
-  gpsBadge.textContent = messages[error.code] || 'GPS gagal';
-  gpsBadge.classList.remove('active');
-}
-
-function getCanvasMetrics(lines, width) {
-  const scale = Math.max(1, width / 1080);
-  const fontSize = Math.round(Math.max(16, Math.min(28 * scale, width * 0.028)));
-  const lineHeight = Math.round(fontSize * 1.22);
-  const paddingX = Math.round(fontSize * 0.5);
-  const paddingY = Math.round(fontSize * 0.4);
-  const margin = Math.round(Math.max(20, width * 0.024));
-  const maxTextWidth = Math.min(width * 0.72, width - margin * 2 - paddingX * 2);
-
-  ctx.font = `750 ${fontSize}px system-ui, -apple-system, Segoe UI, sans-serif`;
-  const wrapped = [];
-  lines.forEach((line) => wrapped.push(...wrapText(line, maxTextWidth)));
-  const textWidth = Math.max(1, ...wrapped.map((line) => ctx.measureText(line).width));
-  const boxWidth = Math.min(width - margin * 2, textWidth + paddingX * 2);
-  const boxHeight = wrapped.length * lineHeight + paddingY * 1.75;
-  return { fontSize, lineHeight, paddingX, paddingY, margin, lines: wrapped, boxWidth, boxHeight };
-}
-
-function wrapText(text, maxWidth) {
-  if (!text) return [''];
-  const words = text.split(' ');
+function wrapText(ctx, text, maxWidth) {
+  const words = String(text).trim().split(/\s+/);
+  if (!words[0]) return [''];
   const lines = [];
-  let line = words.shift() || '';
-  words.forEach((word) => {
+  let line = words.shift();
+  for (const word of words) {
     const test = `${line} ${word}`;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-    } else line = test;
-  });
+    if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = word; }
+    else line = test;
+  }
   lines.push(line);
   return lines;
 }
-
-function drawRoundedRect(x, y, w, h, r) {
-  const radius = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + w, y, x + w, y + h, radius);
-  ctx.arcTo(x + w, y + h, x, y + h, radius);
-  ctx.arcTo(x, y + h, x, y, radius);
-  ctx.arcTo(x, y, x + w, y, radius);
-  ctx.closePath();
+function roundedRect(ctx,x,y,w,h,r) {
+  const rr = Math.min(r,w/2,h/2);
+  ctx.beginPath(); ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr); ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
 }
-
-function drawWatermark(lines) {
-  const m = getCanvasMetrics(lines, canvas.width);
-  const angle = getWatermarkAngle();
-  const rad = angle * Math.PI / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  const rotatedWidth = Math.abs(m.boxWidth * cos) + Math.abs(m.boxHeight * sin);
-  const rotatedHeight = Math.abs(m.boxWidth * sin) + Math.abs(m.boxHeight * cos);
-
-  let x = m.margin;
-  let y = m.margin;
-  if (timestampPosition.value.includes('right')) x = canvas.width - rotatedWidth - m.margin;
-  if (timestampPosition.value.includes('bottom')) y = canvas.height - rotatedHeight - m.margin;
-
-  const centerX = x + rotatedWidth / 2;
-  const centerY = y + rotatedHeight / 2;
-  const boxX = -m.boxWidth / 2;
-  const boxY = -m.boxHeight / 2;
-
+function getStampMetrics(ctx,w,h,lines) {
+  const scale = Number(stampSize.value) / 85;
+  const shortSide = Math.min(w,h);
+  const fontSize = Math.round(clamp(shortSide * .022 * scale, 14, 50));
+  const lineHeight = Math.round(fontSize * 1.22);
+  const padX = Math.round(fontSize * .55), padY = Math.round(fontSize * .42);
+  const margin = Math.round(clamp(shortSide * .02, 14, 44));
+  const maxTextWidth = Math.min(w * .68, w - margin*2 - padX*2);
+  ctx.font = `800 ${fontSize}px system-ui,-apple-system,Segoe UI,sans-serif`;
+  const wrapped = lines.flatMap(line => wrapText(ctx,line,maxTextWidth));
+  const textWidth = Math.max(1,...wrapped.map(line => ctx.measureText(line).width));
+  const boxW = Math.min(w-margin*2,textWidth+padX*2+(accentBar.checked?Math.round(fontSize*.18):0));
+  const boxH = wrapped.length*lineHeight+padY*2;
+  return {fontSize,lineHeight,padX,padY,margin,wrapped,boxW,boxH};
+}
+function drawStamp(ctx,w,h,lines) {
+  if (!lines.length) return;
+  const palette = PALETTES[stampColor];
+  const m = getStampMetrics(ctx,w,h,lines);
+  let x=m.margin,y=m.margin;
+  if (stampPosition.includes('right')) x=w-m.boxW-m.margin;
+  if (stampPosition.includes('bottom')) y=h-m.boxH-m.margin;
   ctx.save();
-  ctx.translate(centerX, centerY);
-  ctx.rotate(rad);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.62)';
-  drawRoundedRect(boxX, boxY, m.boxWidth, m.boxHeight, Math.round(m.fontSize * .35));
-  ctx.fill();
-
-  ctx.fillStyle = '#ffffff';
-  ctx.textBaseline = 'top';
-  ctx.font = `750 ${m.fontSize}px system-ui, -apple-system, Segoe UI, sans-serif`;
-  ctx.shadowColor = 'rgba(0,0,0,.8)';
-  ctx.shadowBlur = Math.round(m.fontSize * .16);
-  ctx.shadowOffsetY = 2;
-
-  m.lines.forEach((line, index) => {
-    ctx.fillText(line, boxX + m.paddingX, boxY + m.paddingY + index * m.lineHeight);
-  });
+  ctx.fillStyle=palette.bg; roundedRect(ctx,x,y,m.boxW,m.boxH,Math.round(m.fontSize*.22)); ctx.fill();
+  let textX=x+m.padX;
+  if (accentBar.checked) {
+    const barW=Math.max(3,Math.round(m.fontSize*.12));
+    ctx.fillStyle=palette.accent; ctx.fillRect(x,y,barW,m.boxH); textX+=barW;
+  }
+  ctx.fillStyle=palette.text; ctx.font=`800 ${m.fontSize}px system-ui,-apple-system,Segoe UI,sans-serif`; ctx.textBaseline='top';
+  m.wrapped.forEach((line,i)=>ctx.fillText(line,textX,y+m.padY+i*m.lineHeight));
   ctx.restore();
 }
 
-function drawLogo() {
-  if (!logoImage) return;
-  const size = Math.round(Math.min(canvas.width, canvas.height) * 0.12);
-  const margin = Math.round(Math.max(20, canvas.width * 0.025));
-  const ratio = Math.min(size / logoImage.naturalWidth, size / logoImage.naturalHeight);
-  const w = Math.round(logoImage.naturalWidth * ratio);
-  const h = Math.round(logoImage.naturalHeight * ratio);
-  const logoOnLeft = timestampPosition.value === 'top-right';
-  const x = logoOnLeft ? margin : canvas.width - w - margin;
-  const y = margin;
-
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,.42)';
-  drawRoundedRect(x - 10, y - 10, w + 20, h + 20, 14);
-  ctx.fill();
-  ctx.drawImage(logoImage, x, y, w, h);
-  ctx.restore();
+function loadImageFile(file) {
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>resolve({file,img,url}); img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error(`Gagal membuka ${file.name}`));}; img.src=url;
+  });
 }
-
-function triggerFlash() {
-  flash.classList.remove('active');
-  void flash.offsetWidth;
-  flash.classList.add('active');
+async function addFiles(fileList) {
+  const files=[...fileList].filter(file=>/^image\/(jpeg|png|webp)$/.test(file.type));
+  if (!files.length) return;
+  const loaded=[];
+  for (const file of files) { try { loaded.push(await loadImageFile(file)); } catch(_){} }
+  uploads.push(...loaded); currentUploadIndex=Math.max(0,uploads.length-loaded.length);
+  updateBatchUI(); renderUploadPreview();
 }
-
-function buildFilename(date = new Date()) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  const ss = String(date.getSeconds()).padStart(2, '0');
-  const slug = (activity.value || organization.value || 'timestamp').trim().toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 32) || 'timestamp';
-  return `${slug}-${y}${m}${d}-${hh}${mm}${ss}.jpg`;
+function updateBatchUI() {
+  batchCount.textContent=`(${uploads.length})`; downloadAllBtn.disabled=!uploads.length;
+  if (!uploads.length) { uploadPreviewWrap.classList.add('hidden'); dropZone.classList.remove('hidden'); }
+  else { uploadPreviewWrap.classList.remove('hidden'); dropZone.classList.add('hidden'); }
 }
-
-function capturePhoto() {
-  if (!stream || !video.videoWidth || !video.videoHeight) return;
-  refreshOrientation();
-  const capturedAt = new Date();
-  triggerFlash();
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  if (facingMode === 'user') {
-    ctx.save();
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    ctx.restore();
-  } else {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+function renderImageToCanvas(img,canvas,ctx,maxSide=1800) {
+  const ratio=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
+  canvas.width=Math.max(1,Math.round(img.naturalWidth*ratio)); canvas.height=Math.max(1,Math.round(img.naturalHeight*ratio));
+  ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); drawStamp(ctx,canvas.width,canvas.height,buildStampLines());
+}
+function renderUploadPreview() {
+  if (mode !== 'upload' || !uploads.length) return;
+  currentUploadIndex=clamp(currentUploadIndex,0,uploads.length-1);
+  const item=uploads[currentUploadIndex];
+  currentFileName.textContent=item.file.name; photoCounter.textContent=`${currentUploadIndex+1} / ${uploads.length}`;
+  renderImageToCanvas(item.img,uploadCanvas,uploadCtx,1600);
+}
+async function makeStampedBlob(item) {
+  const maxSide=3200; const ratio=Math.min(1,maxSide/Math.max(item.img.naturalWidth,item.img.naturalHeight));
+  workCanvas.width=Math.max(1,Math.round(item.img.naturalWidth*ratio)); workCanvas.height=Math.max(1,Math.round(item.img.naturalHeight*ratio));
+  workCtx.clearRect(0,0,workCanvas.width,workCanvas.height); workCtx.drawImage(item.img,0,0,workCanvas.width,workCanvas.height); drawStamp(workCtx,workCanvas.width,workCanvas.height,buildStampLines());
+  return canvasToBlob(workCanvas,.94);
+}
+function canvasToBlob(canvas,quality=.94) { return new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality)); }
+function makeFilename(prefix='timestamp', original='') {
+  const d=getStampDate(); const base=original?original.replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'-').slice(0,45):prefix;
+  return `${base || prefix}-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.jpg`;
+}
+function revokeLastResult() { if(lastResultUrl) URL.revokeObjectURL(lastResultUrl); lastResultUrl=null; }
+function showResult(blob,name) {
+  revokeLastResult(); lastResultBlob=blob; lastResultName=name; lastResultUrl=URL.createObjectURL(blob);
+  resultImage.src=lastResultUrl; downloadCurrent.href=lastResultUrl; downloadCurrent.download=name; resultPanel.classList.remove('hidden');
+  resultPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function downloadCurrentUpload() {
+  if (!uploads.length) return;
+  const item=uploads[currentUploadIndex]; const blob=await makeStampedBlob(item); if(blob) showResult(blob,makeFilename('timestamp',item.file.name));
+}
+async function downloadAll() {
+  if (!uploads.length) return;
+  downloadAllBtn.disabled=true; downloadAllBtn.firstChild.textContent='Memproses... ';
+  for (let i=0;i<uploads.length;i++) {
+    const item=uploads[i]; const blob=await makeStampedBlob(item); if(!blob) continue;
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=makeFilename('timestamp',item.file.name); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000); await new Promise(r=>setTimeout(r,350));
   }
-
-  drawWatermark(buildOverlayLines(capturedAt));
-  drawLogo();
-
-  canvas.toBlob(async (blob) => {
-    if (!blob) return;
-    if (lastPhotoUrl) URL.revokeObjectURL(lastPhotoUrl);
-    lastPhotoBlob = blob;
-    lastPhotoUrl = URL.createObjectURL(blob);
-    lastFilename = buildFilename(capturedAt);
-
-    capturedImage.src = lastPhotoUrl;
-    downloadPhoto.href = lastPhotoUrl;
-    downloadPhoto.download = lastFilename;
-    resultCard.classList.remove('hidden');
-
-    if (saveGallery.checked) {
-      try {
-        await addPhotoToGallery({ blob, filename: lastFilename, createdAt: capturedAt.getTime() });
-        await renderGallery();
-      } catch (_) {}
-    }
-
-    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 'image/jpeg', Number(imageQuality.value));
+  downloadAllBtn.firstChild.textContent='Download semua '; downloadAllBtn.disabled=false;
 }
-
-async function sharePhoto() {
-  if (!lastPhotoBlob) return;
-  const file = new File([lastPhotoBlob], lastFilename, { type: 'image/jpeg' });
+async function shareCurrentResult() {
+  if (!lastResultBlob) return;
+  const file=new File([lastResultBlob],lastResultName,{type:'image/jpeg'});
   try {
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'Foto Timestamp', text: activity.value || organization.value || 'Foto dokumentasi' });
-    } else if (navigator.share) {
-      await navigator.share({ title: 'Foto Timestamp', text: 'Foto sudah tersimpan. Gunakan tombol Unduh Foto untuk membagikan file.' });
-    } else {
-      statusMessage.textContent = 'Fitur Bagikan tidak tersedia di browser ini. Gunakan tombol Unduh Foto.';
-      statusMessage.className = 'status';
-    }
-  } catch (error) {
-    if (error?.name !== 'AbortError') {
-      statusMessage.textContent = 'Foto belum dapat dibagikan. Silakan gunakan tombol Unduh Foto.';
-    }
-  }
+    if(navigator.canShare?.({files:[file]})) await navigator.share({files:[file],title:'Foto Timestamp'});
+    else if(navigator.share) await navigator.share({title:'Foto Timestamp',text:'Foto timestamp siap digunakan.'});
+  } catch(err){ if(err?.name!=='AbortError') console.warn(err); }
 }
 
-function loadLogo(file) {
-  if (!file) return;
-  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
-    img.onload = () => {
-      logoImage = img;
-      logoPreview.querySelector('img').src = reader.result;
-      logoPreview.classList.remove('hidden');
-    };
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
+async function useLocation() {
+  if (!navigator.geolocation) { gpsInfo.textContent='GPS tidak didukung browser ini.'; return; }
+  gpsInfo.textContent='Mencari lokasi…'; useLocationBtn.disabled=true;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude, lon=pos.coords.longitude; gpsAccuracy=pos.coords.accuracy;
+    latitude.value=lat.toFixed(6); longitude.value=lon.toFixed(6); gpsInfo.textContent=`GPS aktif · akurasi ±${Math.round(gpsAccuracy)} m`;
+    updateAllPreviews();
+    try {
+      const url=`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&localityLanguage=id`;
+      const res=await fetch(url); if(res.ok){ const data=await res.json(); const parts=[data.locality||data.city,data.principalSubdivision,data.countryName].filter(Boolean); if(parts.length) address.value=[...new Set(parts)].join(', '); updateAllPreviews(); }
+    } catch(_){}
+    useLocationBtn.disabled=false;
+  },err=>{ gpsInfo.textContent=err.code===1?'Izin lokasi ditolak.':'Lokasi tidak tersedia.'; useLocationBtn.disabled=false; },{enableHighAccuracy:true,timeout:15000,maximumAge:5000});
 }
 
-function openDb() {
-  if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB unavailable'));
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open('timestamp-camera-db', 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos', { keyPath: 'id', autoIncrement: true });
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-  return dbPromise;
+function collectDefaults() {
+  return {dateFormat,clock24:clock24.checked,showAddress:showAddress.checked,showCoordinates:showCoordinates.checked,showNote:showNote.checked,accentBar:accentBar.checked,stampSize:stampSize.value,watermark:watermark.value,stampColor,stampPosition};
 }
-
-async function addPhotoToGallery(photo) {
-  const db = await openDb();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction('photos', 'readwrite');
-    tx.objectStore('photos').add(photo);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-  const photos = await getAllPhotos();
-  if (photos.length > 12) {
-    const excess = photos.sort((a, b) => a.createdAt - b.createdAt).slice(0, photos.length - 12);
-    await Promise.all(excess.map((p) => deletePhoto(p.id)));
-  }
+function applyDefaults(data={}) {
+  dateFormat=data.dateFormat||'dmy'; clock24.checked=data.clock24!==false; showAddress.checked=data.showAddress!==false; showCoordinates.checked=data.showCoordinates!==false; showNote.checked=data.showNote!==false; accentBar.checked=data.accentBar!==false; stampSize.value=data.stampSize||85; watermark.value=data.watermark||''; stampColor=data.stampColor||'dark'; stampPosition=data.stampPosition||'bottom-left';
+  syncControlStates(); updateAllPreviews();
 }
-
-async function getAllPhotos() {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction('photos', 'readonly').objectStore('photos').getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  });
+function saveDefaults() { localStorage.setItem(DEFAULTS_KEY,JSON.stringify(collectDefaults())); saveDefaultsBtn.textContent='Tersimpan ✓'; setTimeout(()=>saveDefaultsBtn.textContent='Simpan default',1200); }
+function resetDefaults() { localStorage.removeItem(DEFAULTS_KEY); applyDefaults({}); }
+function loadDefaults() { try { applyDefaults(JSON.parse(localStorage.getItem(DEFAULTS_KEY)||'{}')); } catch(_) { applyDefaults({}); } }
+function syncControlStates() {
+  dateFormats.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.format===dateFormat));
+  positionGrid.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.position===stampPosition));
+  document.querySelectorAll('.color-dot').forEach(b=>b.classList.toggle('active',b.dataset.color===stampColor));
 }
+function updateAllPreviews() { updateLiveStamp(); renderUploadPreview(); }
 
-async function deletePhoto(id) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction('photos', 'readwrite').objectStore('photos').delete(id);
-    req.onsuccess = resolve;
-    req.onerror = () => reject(req.error);
-  });
-}
+cameraTab.addEventListener('click',()=>setMode('camera'));
+uploadTab.addEventListener('click',()=>setMode('upload'));
+heroCameraBtn.addEventListener('click',async()=>{setMode('camera'); $('tool').scrollIntoView({behavior:'smooth'}); await startCamera();});
+startCameraBtn.addEventListener('click',startCamera); switchCameraBtn.addEventListener('click',switchCamera); capturePhotoBtn.addEventListener('click',capturePhoto);
+chooseFilesBtn.addEventListener('click',()=>photoInput.click()); addMorePhotosBtn.addEventListener('click',()=>photoInput.click()); photoInput.addEventListener('change',async()=>{await addFiles(photoInput.files); photoInput.value='';});
+dropZone.addEventListener('click',e=>{if(e.target===dropZone||e.target.closest('.drop-icon,h3,p')) photoInput.click();});
+dropZone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();photoInput.click();}});
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.add('dragging');}));
+['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.remove('dragging');}));
+dropZone.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+prevPhoto.addEventListener('click',()=>{if(uploads.length){currentUploadIndex=(currentUploadIndex-1+uploads.length)%uploads.length;renderUploadPreview();}});
+nextPhoto.addEventListener('click',()=>{if(uploads.length){currentUploadIndex=(currentUploadIndex+1)%uploads.length;renderUploadPreview();}});
+uploadCanvas.addEventListener('click',downloadCurrentUpload); downloadSelectedBtn.addEventListener('click',downloadCurrentUpload);
+downloadAllBtn.addEventListener('click',downloadAll); shareCurrent.addEventListener('click',shareCurrentResult); useLocationBtn.addEventListener('click',useLocation);
+dateFormats.addEventListener('click',e=>{const b=e.target.closest('button[data-format]');if(!b)return;dateFormat=b.dataset.format;syncControlStates();updateAllPreviews();});
+positionGrid.addEventListener('click',e=>{const b=e.target.closest('button[data-position]');if(!b)return;stampPosition=b.dataset.position;syncControlStates();updateAllPreviews();});
+document.querySelectorAll('.color-dot').forEach(b=>b.addEventListener('click',()=>{stampColor=b.dataset.color;syncControlStates();updateAllPreviews();}));
+capturedAt.addEventListener('input',()=>{manualTime=true;updateAllPreviews();});
+[clock24,address,latitude,longitude,showAddress,showCoordinates,jobNote,showNote,accentBar,stampSize,watermark].forEach(el=>el.addEventListener(el.type==='range'?'input':'change',updateAllPreviews));
+[address,latitude,longitude,jobNote,watermark].forEach(el=>el.addEventListener('input',updateAllPreviews));
+saveDefaultsBtn.addEventListener('click',saveDefaults); resetDefaultsBtn.addEventListener('click',resetDefaults);
+window.addEventListener('resize',updateLiveStamp);
+window.addEventListener('beforeunload',()=>{stopCamera(); uploads.forEach(x=>URL.revokeObjectURL(x.url)); revokeLastResult();});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;installAppBtn.classList.remove('hidden');});
+installAppBtn.addEventListener('click',async()=>{if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;installAppBtn.classList.add('hidden');});
 
-async function clearGallery() {
-  const db = await openDb();
-  await new Promise((resolve, reject) => {
-    const req = db.transaction('photos', 'readwrite').objectStore('photos').clear();
-    req.onsuccess = resolve;
-    req.onerror = () => reject(req.error);
-  });
-  await renderGallery();
-}
-
-async function renderGallery() {
-  try {
-    const photos = (await getAllPhotos()).sort((a, b) => b.createdAt - a.createdAt);
-    gallery.innerHTML = '';
-    emptyGallery.classList.toggle('hidden', photos.length > 0);
-
-    photos.forEach((photo) => {
-      const url = URL.createObjectURL(photo.blob);
-      const item = document.createElement('article');
-      item.className = 'gallery-item';
-      item.innerHTML = `
-        <img alt="Foto dokumentasi ${new Date(photo.createdAt).toLocaleString('id-ID')}" loading="lazy" />
-        <div class="gallery-meta">
-          <time>${new Date(photo.createdAt).toLocaleString('id-ID')}</time>
-          <div class="gallery-actions">
-            <a class="btn btn-secondary" download="${escapeHtml(photo.filename)}">Unduh</a>
-            <button class="btn btn-secondary" type="button" aria-label="Hapus foto">×</button>
-          </div>
-        </div>`;
-      item.querySelector('img').src = url;
-      const link = item.querySelector('a');
-      link.href = url;
-      item.querySelector('button').addEventListener('click', async () => {
-        URL.revokeObjectURL(url);
-        await deletePhoto(photo.id);
-        await renderGallery();
-      });
-      gallery.appendChild(item);
-    });
-  } catch (_) {
-    emptyGallery.textContent = 'Galeri lokal tidak tersedia pada browser ini.';
-  }
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>'"]/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[ch]));
-}
-
-function bindPreferenceEvents() {
-  PREF_KEYS.forEach((key) => {
-    const el = $(key);
-    if (!el) return;
-    const event = el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input';
-    el.addEventListener(event, () => {
-      savePrefs();
-      updateTimestamp();
-      if (key === 'timestampPosition') updateOverlayPosition();
-      if (key === 'watermarkRotationMode') updateOverlayRotation();
-    });
-  });
-}
-
-startCameraBtn.addEventListener('click', startCamera);
-switchCameraBtn.addEventListener('click', switchCamera);
-capturePhotoBtn.addEventListener('click', capturePhoto);
-sharePhotoBtn.addEventListener('click', sharePhoto);
-retakePhoto.addEventListener('click', () => {
-  resultCard.classList.add('hidden');
-  document.querySelector('.camera-card').scrollIntoView({ behavior: 'smooth' });
-});
-getLocationBtn.addEventListener('click', () => requestLocation(true));
-watchLocationBtn.addEventListener('click', () => requestLocation(false));
-logoInput.addEventListener('change', () => loadLogo(logoInput.files?.[0]));
-clearGalleryBtn.addEventListener('click', clearGallery);
-
-window.addEventListener('beforeinstallprompt', (event) => {
-  event.preventDefault();
-  deferredInstallPrompt = event;
-  installAppBtn.classList.remove('hidden');
-});
-installAppBtn.addEventListener('click', async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  installAppBtn.classList.add('hidden');
-});
-window.addEventListener('appinstalled', () => installAppBtn.classList.add('hidden'));
-window.addEventListener('resize', refreshOrientation);
-window.addEventListener('orientationchange', refreshOrientation);
-screen.orientation?.addEventListener?.('change', refreshOrientation);
-
-window.addEventListener('beforeunload', () => {
-  stopCamera();
-  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-  if (lastPhotoUrl) URL.revokeObjectURL(lastPhotoUrl);
-});
-
-loadPrefs();
-bindPreferenceEvents();
-refreshOrientation();
-updateOverlayPosition();
-updateTimestamp();
-setInterval(updateTimestamp, 500);
-renderGallery();
-
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
+capturedAt.value=localDateTimeValue();
+setInterval(()=>{if(!manualTime && !document.activeElement?.matches('#capturedAt')) capturedAt.value=localDateTimeValue(); updateLiveStamp();},1000);
+loadDefaults(); setMode('camera'); updateBatchUI();
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')) navigator.serviceWorker.register('./sw.js').catch(()=>{});

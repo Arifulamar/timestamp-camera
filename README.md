@@ -1,48 +1,20 @@
-# Timestamp Camera GPS Online v2
+# Kamera Timestamp GPS — versi baru
 
-Web app statis dan mobile-first untuk foto dokumentasi dengan timestamp, GPS, identitas kegiatan, dan watermark logo. Tidak membutuhkan backend.
+Web app statis untuk GitHub Pages / hosting HTTPS.
 
-## Fitur utama
-- Kamera belakang/depan via `getUserMedia`
-- Timestamp tanggal + jam real-time
-- GPS latitude, longitude, akurasi, dan link Google Maps
-- Nama lokasi/alamat manual
-- Instansi/sekolah, kegiatan, petugas, dan catatan
-- Upload logo PNG/JPG/WebP sebagai watermark
-- Watermark tertanam ke file JPG hasil foto
-- Pilihan posisi watermark dan kualitas JPG
-- Tombol Share memakai Web Share API bila tersedia
-- Galeri lokal maksimal 12 foto menggunakan IndexedDB
-- Pengaturan tersimpan menggunakan localStorage
-- PWA + offline asset cache
-- SEO meta tags, Open Graph, FAQ Schema, WebApplication Schema
-- robots.txt + sitemap.xml
-- Tidak ada upload foto ke server
+## Fitur
+- Kamera langsung dari ponsel.
+- Impor beberapa foto JPG/PNG/WEBP.
+- Timestamp tanggal dan jam.
+- GPS, alamat otomatis (reverse geocoding saat internet tersedia), koordinat.
+- Catatan pekerjaan dan watermark nama instansi.
+- 4 posisi stempel, 4 palet warna, accent bar, ukuran stempel.
+- Simpan preferensi tampilan sebagai default.
+- Download foto tunggal dan batch.
+- PWA + SEO dasar.
 
-## Persyaratan browser
-Kamera dan geolocation membutuhkan **HTTPS** atau `localhost`, serta izin pengguna. GitHub Pages sudah menggunakan HTTPS.
+## Deploy
+Upload seluruh isi folder ke root repository GitHub Pages. Kamera dan GPS memerlukan HTTPS atau localhost.
 
-## Deploy GitHub Pages
-1. Upload seluruh file ke repository GitHub.
-2. Masuk ke **Settings > Pages**.
-3. Pilih **Deploy from a branch**.
-4. Pilih branch `main` dan folder `/root`.
-5. Buka URL GitHub Pages dari ponsel.
-
-## SEO sebelum publikasi
-Ganti semua `https://example.com/` pada:
-- `index.html`
-- `robots.txt`
-- `sitemap.xml`
-
-dengan domain final Anda.
-
-## Privasi
-Aplikasi tidak mengirim foto atau data GPS ke server aplikasi. Foto galeri tersimpan pada IndexedDB browser lokal. Tombol “Buka Peta” membuka Google Maps pada tab baru setelah pengguna meminta GPS.
-
-
-## Fitur baru v3
-
-- Putaran watermark otomatis mengikuti orientasi perangkat saat foto diambil.
-- Opsi manual: 0°, 90°, -90°, atau 180°.
-- Preview watermark ikut berputar di layar.
+## Domain
+Metadata saat ini memakai `https://kameratimestamp.id/`. Ganti canonical, og:url, robots.txt, sitemap.xml jika domain akhirnya berbeda.

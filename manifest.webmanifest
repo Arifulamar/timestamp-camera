@@ -1,18 +1,14 @@
 {
-  "name": "Kamera Timestamp GPS Online",
-  "short_name": "Timestamp GPS",
-  "description": "Kamera dokumentasi dengan timestamp, GPS, identitas kegiatan, dan watermark logo langsung dari browser ponsel.",
-  "id": "./",
+  "name": "Kamera Timestamp GPS",
+  "short_name": "Kamera Timestamp",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#070b14",
-  "theme_color": "#0b1020",
-  "lang": "id-ID",
-  "categories": ["photo", "utilities", "productivity"],
+  "background_color": "#f4efe6",
+  "theme_color": "#f4efe6",
+  "description": "Kamera timestamp GPS untuk foto dengan tanggal, jam, lokasi, catatan dan watermark.",
   "icons": [
-    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png"}
   ]
 }
