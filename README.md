@@ -17,4 +17,4 @@ Web app statis untuk GitHub Pages / hosting HTTPS.
 Upload seluruh isi folder ke root repository GitHub Pages. Kamera dan GPS memerlukan HTTPS atau localhost.
 
 ## Domain
-Metadata saat ini memakai `https://kameratimestamp.id/`. Ganti canonical, og:url, robots.txt, sitemap.xml jika domain akhirnya berbeda.
+Metadata saat ini memakai `https://kameratimestamp.web.id/`. Ganti canonical, og:url, robots.txt, sitemap.xml jika domain akhirnya berbeda.
