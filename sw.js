@@ -1,4 +1,4 @@
-const CACHE = 'timestamp-camera-gps-v5';
+const CACHE = 'kamera-timestamp-v6';
 const ASSETS = [
   './', './index.html', './style.css', './app.js', './manifest.webmanifest',
   './icon-192.png', './icon-512.png'

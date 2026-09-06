@@ -2,7 +2,6 @@
 
 const $ = (id) => document.getElementById(id);
 const video = $('video');
-const cameraStage = $('cameraStage');
 const canvas = $('photoCanvas');
 const ctx = canvas.getContext('2d');
 const startCameraBtn = $('startCamera');
@@ -123,26 +122,18 @@ function normalizeAngle(angle) {
 }
 
 function readDeviceOrientationAngle() {
-  // iPhone / iPad Safari
-  if (typeof window.orientation === 'number') {
-    return normalizeAngle(window.orientation);
-  }
+  const type = screen.orientation?.type || '';
+  if (type.startsWith('portrait-primary')) return 0;
+  if (type.startsWith('portrait-secondary')) return 180;
+  if (type.startsWith('landscape-primary')) return 90;
+  if (type.startsWith('landscape-secondary')) return -90;
 
-  // Android / Chrome
-  if (
-    screen.orientation &&
-    typeof screen.orientation.angle === 'number'
-  ) {
-    return normalizeAngle(screen.orientation.angle);
-  }
+  const rawAngle = typeof screen.orientation?.angle === 'number'
+    ? screen.orientation.angle
+    : (typeof window.orientation === 'number' ? window.orientation : null);
 
-  // Fallback jika Orientation API tidak tersedia
-  const viewport = window.visualViewport;
-
-  const width = viewport?.width || window.innerWidth;
-  const height = viewport?.height || window.innerHeight;
-
-  return width > height ? 90 : 0;
+  if (rawAngle !== null) return normalizeAngle(rawAngle);
+  return window.innerWidth > window.innerHeight ? 90 : 0;
 }
 
 function describeAngle(angle) {
@@ -153,45 +144,34 @@ function describeAngle(angle) {
 }
 
 function getWatermarkAngle() {
-  // AUTO tidak perlu memutar teks.
-  // Canvas foto akan mengikuti orientasi kamera.
-  if (watermarkRotationMode?.value === 'auto') {
-    return 0;
-  }
+  return watermarkRotationMode?.value === 'auto'
+    ? currentOrientationAngle
+    : normalizeAngle(Number(watermarkRotationMode?.value || 0));
+}
 
-  return normalizeAngle(
-    Number(watermarkRotationMode?.value || 0)
-  );
+function getOverlayTransformOrigin(position) {
+  if (position === 'top-left') return 'left top';
+  if (position === 'top-right') return 'right top';
+  if (position === 'bottom-left') return 'left bottom';
+  return 'right bottom';
 }
 
 function updateOverlayRotation() {
   const angle = getWatermarkAngle();
-
-  // Putar caption timestamp
-  timestampOverlay.style.transformOrigin = 'center center';
-  timestampOverlay.style.transform = `rotate(${angle}deg)`;
+  timestampOverlay.style.transformOrigin = getOverlayTransformOrigin(timestampPosition.value);
+  timestampOverlay.style.transform = angle ? `rotate(${angle}deg)` : 'none';
 
   if (orientationHint) {
-    const modeText =
-      watermarkRotationMode?.value === 'auto'
-        ? `otomatis (${describeAngle(angle)})`
-        : `manual (${angle}°)`;
-
-    orientationHint.textContent =
-      `Orientasi perangkat: ${describeAngle(currentOrientationAngle)} · Watermark: ${modeText}`;
+    const modeText = watermarkRotationMode?.value === 'auto'
+      ? `otomatis (${describeAngle(angle)})`
+      : `manual (${angle}°)`;
+    orientationHint.textContent = `Orientasi perangkat: ${describeAngle(currentOrientationAngle)} · Watermark: ${modeText}`;
   }
 }
 
 function refreshOrientation() {
   currentOrientationAngle = readDeviceOrientationAngle();
   updateOverlayRotation();
-}
-
-function handleOrientationChange() {
-  // Beri waktu browser menyelesaikan perubahan orientasi
-  window.setTimeout(() => {
-    refreshOrientation();
-  }, 180);
 }
 
 function updateOverlayPosition() {
@@ -459,140 +439,50 @@ function buildFilename(date = new Date()) {
   const slug = (activity.value || organization.value || 'timestamp').trim().toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 32) || 'timestamp';
   return `${slug}-${y}${m}${d}-${hh}${mm}${ss}.jpg`;
 }
-function drawVideoCover(video, ctx, targetWidth, targetHeight, mirror = false) {
-  const videoWidth = video.videoWidth;
-  const videoHeight = video.videoHeight;
 
-  const sourceRatio = videoWidth / videoHeight;
-  const targetRatio = targetWidth / targetHeight;
-
-  let sx = 0;
-  let sy = 0;
-  let sw = videoWidth;
-  let sh = videoHeight;
-
-  // Sama seperti object-fit: cover
-  if (sourceRatio > targetRatio) {
-    sw = videoHeight * targetRatio;
-    sx = (videoWidth - sw) / 2;
-  } else {
-    sh = videoWidth / targetRatio;
-    sy = (videoHeight - sh) / 2;
-  }
-
-  ctx.save();
-
-  if (mirror) {
-    ctx.translate(targetWidth, 0);
-    ctx.scale(-1, 1);
-  }
-
-  ctx.drawImage(
-    video,
-    sx,
-    sy,
-    sw,
-    sh,
-    0,
-    0,
-    targetWidth,
-    targetHeight
-  );
-
-  ctx.restore();
-}
 function capturePhoto() {
-  if (!stream || !video.videoWidth || !video.videoHeight) {
-    return;
-  }
-
+  if (!stream || !video.videoWidth || !video.videoHeight) return;
+  refreshOrientation();
   const capturedAt = new Date();
-
   triggerFlash();
 
-  // Ambil orientasi aktual tampilan kamera
-  const stageRect = cameraStage.getBoundingClientRect();
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 
-  const isLandscape =
-    stageRect.width > stageRect.height;
-
-  // Gunakan resolusi cukup tinggi
-  const maxDimension = Math.max(
-    video.videoWidth,
-    video.videoHeight
-  );
-
-  if (isLandscape) {
-    // LANDSCAPE
-    canvas.width = maxDimension;
-    canvas.height = Math.round(
-      maxDimension * (stageRect.height / stageRect.width)
-    );
+  if (facingMode === 'user') {
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
   } else {
-    // PORTRAIT
-    canvas.height = maxDimension;
-    canvas.width = Math.round(
-      maxDimension * (stageRect.width / stageRect.height)
-    );
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   }
 
-  // Gambar kamera sesuai orientasi layar
-  drawVideoCover(
-    video,
-    ctx,
-    canvas.width,
-    canvas.height,
-    facingMode === 'user'
-  );
-
-  // Watermark digambar setelah foto sudah mengikuti orientasi
-  drawWatermark(
-    buildOverlayLines(capturedAt)
-  );
-
+  drawWatermark(buildOverlayLines(capturedAt));
   drawLogo();
 
-  canvas.toBlob(
-    async (blob) => {
-      if (!blob) return;
+  canvas.toBlob(async (blob) => {
+    if (!blob) return;
+    if (lastPhotoUrl) URL.revokeObjectURL(lastPhotoUrl);
+    lastPhotoBlob = blob;
+    lastPhotoUrl = URL.createObjectURL(blob);
+    lastFilename = buildFilename(capturedAt);
 
-      if (lastPhotoUrl) {
-        URL.revokeObjectURL(lastPhotoUrl);
-      }
+    capturedImage.src = lastPhotoUrl;
+    downloadPhoto.href = lastPhotoUrl;
+    downloadPhoto.download = lastFilename;
+    resultCard.classList.remove('hidden');
 
-      lastPhotoBlob = blob;
-      lastPhotoUrl = URL.createObjectURL(blob);
-      lastFilename = buildFilename(capturedAt);
+    if (saveGallery.checked) {
+      try {
+        await addPhotoToGallery({ blob, filename: lastFilename, createdAt: capturedAt.getTime() });
+        await renderGallery();
+      } catch (_) {}
+    }
 
-      capturedImage.src = lastPhotoUrl;
-
-      downloadPhoto.href = lastPhotoUrl;
-      downloadPhoto.download = lastFilename;
-
-      resultCard.classList.remove('hidden');
-
-      if (saveGallery.checked) {
-        try {
-          await addPhotoToGallery({
-            blob,
-            filename: lastFilename,
-            createdAt: capturedAt.getTime()
-          });
-
-          await renderGallery();
-        } catch (error) {
-          console.error(error);
-        }
-      }
-
-      resultCard.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    },
-    'image/jpeg',
-    Number(imageQuality.value)
-  );
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 'image/jpeg', Number(imageQuality.value));
 }
 
 async function sharePhoto() {
@@ -766,22 +656,9 @@ installAppBtn.addEventListener('click', async () => {
   installAppBtn.classList.add('hidden');
 });
 window.addEventListener('appinstalled', () => installAppBtn.classList.add('hidden'));
-window.addEventListener('resize', handleOrientationChange);
-
-window.addEventListener(
-  'orientationchange',
-  handleOrientationChange
-);
-
-window.visualViewport?.addEventListener?.(
-  'resize',
-  handleOrientationChange
-);
-
-screen.orientation?.addEventListener?.(
-  'change',
-  handleOrientationChange
-);
+window.addEventListener('resize', refreshOrientation);
+window.addEventListener('orientationchange', refreshOrientation);
+screen.orientation?.addEventListener?.('change', refreshOrientation);
 
 window.addEventListener('beforeunload', () => {
   stopCamera();

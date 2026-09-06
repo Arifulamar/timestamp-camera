@@ -1,5 +1,5 @@
 {
-  "name": "Timestamp Camera GPS Online",
+  "name": "Kamera Timestamp GPS Online",
   "short_name": "Timestamp GPS",
   "description": "Kamera dokumentasi dengan timestamp, GPS, identitas kegiatan, dan watermark logo langsung dari browser ponsel.",
   "id": "./",
