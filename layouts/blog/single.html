@@ -1,0 +1,9 @@
+{{ define "main" }}
+<article class="article">
+<p class="eyebrow">KAMERA TIMESTAMP</p>
+<h1>{{ .Title }}</h1>
+<p class="date">{{ .Date.Format "2 January 2006" }}</p>
+{{ .Content }}
+<div class="cta"><strong>Butuh foto bertimestamp?</strong><a href="/">Buka Kamera Timestamp Online →</a></div>
+</article>
+{{ end }}
