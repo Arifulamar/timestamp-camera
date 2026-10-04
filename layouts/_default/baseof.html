@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="{{ .Site.LanguageCode }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
+{{ with .Description }}<meta name="description" content="{{ . }}">{{ else }}<meta name="description" content="{{ .Site.Params.description }}">{{ end }}
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="{{ .Permalink }}">
+<link rel="stylesheet" href="/blog/blog.css">
+</head>
+<body>
+<header class="blog-header"><div class="blog-shell"><a class="blog-brand" href="/blog/">Kamera Timestamp</a><nav><a href="/">Kamera</a><a href="/blog/">Blog</a></nav></div></header>
+<main class="blog-shell">{{ block "main" . }}{{ end }}</main>
+<footer class="blog-footer"><div class="blog-shell">© {{ now.Year }} Kamera Timestamp</div></footer>
+</body>
+</html>
