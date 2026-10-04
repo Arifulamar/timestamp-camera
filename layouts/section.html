@@ -1,19 +1,33 @@
 {{ define "main" }}
-<section class="hero">
-  <p class="eyebrow">BLOG KAMERA TIMESTAMP</p>
+<section class="hero blog-hero">
+  <p class="eyebrow">PANDUAN & TUTORIAL</p>
   <h1>{{ .Title }}</h1>
   <p>{{ .Description }}</p>
+  <div class="hero-actions">
+    <a class="cta-button" href="/">Buka Kamera Timestamp →</a>
+  </div>
 </section>
+
+{{ partial "adsense.html" . }}
+
 <section class="posts" aria-label="Daftar artikel">
   {{ range .Pages.ByDate.Reverse }}
   <article class="post-card">
-    <p class="date">{{ .Date.Format "2 January 2006" }}</p>
+    <div class="post-meta">
+      <span>{{ .Date.Format "2 January 2006" }}</span>
+      {{ with index .Params.categories 0 }}<span>·</span><span>{{ . }}</span>{{ end }}
+    </div>
     <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
     <p>{{ .Description }}</p>
-    <a class="read-more" href="{{ .RelPermalink }}">Baca artikel →</a>
+    <div class="post-bottom">
+      <a class="read-more" href="{{ .RelPermalink }}">Baca artikel →</a>
+      {{ with .ReadingTime }}<span class="reading-time">{{ . }} min baca</span>{{ end }}
+    </div>
   </article>
   {{ else }}
   <p>Belum ada artikel.</p>
   {{ end }}
 </section>
+
+{{ partial "adsense.html" . }}
 {{ end }}
