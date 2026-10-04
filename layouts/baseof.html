@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ .Site.LanguageCode | default "id" }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
+  {{ $description := .Description | default .Site.Params.description }}
+  <meta name="description" content="{{ $description }}">
+  {{ with .Params.keywords }}<meta name="keywords" content="{{ delimit . ", " }}">{{ end }}
+  <meta name="robots" content="{{ if .Draft }}noindex,follow{{ else }}index,follow,max-image-preview:large{{ end }}">
+  <link rel="canonical" href="{{ .Permalink }}">
+  {{ if .IsPage }}
+  <meta property="og:type" content="article">
+  {{ else }}
+  <meta property="og:type" content="website">
+  {{ end }}
+  <meta property="og:title" content="{{ .Title }}">
+  <meta property="og:description" content="{{ $description }}">
+  <meta property="og:url" content="{{ .Permalink }}">
+  <meta name="twitter:card" content="summary">
+  {{ block "head-extra" . }}{{ end }}
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8942638117851999" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="/blog/blog.css">
+</head>
+<body>
+<header class="blog-header">
+  <div class="blog-shell blog-nav">
+    <a class="blog-brand" href="/blog/">Kamera Timestamp</a>
+    <nav aria-label="Navigasi blog">
+      <a href="/">Kamera</a>
+      <a href="/blog/">Blog</a>
+    </nav>
+  </div>
+</header>
+<main class="blog-shell">
+  {{ block "main" . }}{{ end }}
+</main>
+<footer class="blog-footer">
+  <div class="blog-shell">© {{ now.Year }} Kamera Timestamp</div>
+</footer>
+</body>
+</html>
