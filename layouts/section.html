@@ -1,0 +1,19 @@
+{{ define "main" }}
+<section class="hero">
+  <p class="eyebrow">BLOG KAMERA TIMESTAMP</p>
+  <h1>{{ .Title }}</h1>
+  <p>{{ .Description }}</p>
+</section>
+<section class="posts" aria-label="Daftar artikel">
+  {{ range .Pages.ByDate.Reverse }}
+  <article class="post-card">
+    <p class="date">{{ .Date.Format "2 January 2006" }}</p>
+    <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+    <p>{{ .Description }}</p>
+    <a class="read-more" href="{{ .RelPermalink }}">Baca artikel →</a>
+  </article>
+  {{ else }}
+  <p>Belum ada artikel.</p>
+  {{ end }}
+</section>
+{{ end }}
