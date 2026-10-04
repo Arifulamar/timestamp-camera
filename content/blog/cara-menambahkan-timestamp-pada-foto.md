@@ -1,6 +1,7 @@
 ---
 title: "Cara Menambahkan Timestamp pada Foto Secara Online"
 description: "Pelajari cara menambahkan tanggal, waktu, GPS, dan watermark pada foto secara online dari HP atau komputer."
+slug: "cara-menambahkan-timestamp-pada-foto"
 date: 2026-10-04
 lastmod: 2026-10-04
 draft: false
