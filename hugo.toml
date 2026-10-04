@@ -7,6 +7,7 @@ canonifyURLs = true
 [params]
 description = "Panduan dan artikel tentang kamera timestamp, foto dengan tanggal, waktu, GPS, dan watermark."
 author = "Kamera Timestamp"
+adsenseClient = ""
 
 [permalinks]
 blog = "/blog/:slug/"
