@@ -1,0 +1,12 @@
+baseURL = "https://kameratimestamp.web.id/"
+languageCode = "id"
+title = "Kamera Timestamp"
+enableRobotsTXT = true
+canonifyURLs = true
+
+[params]
+description = "Panduan dan artikel tentang kamera timestamp, foto dengan tanggal, waktu, GPS, dan watermark."
+author = "Kamera Timestamp"
+
+[permalinks]
+blog = "/blog/:slug/"
