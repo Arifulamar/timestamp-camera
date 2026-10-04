@@ -1,68 +1,65 @@
+{{ define "head-extra" }}
+{{ with .Params.faq }}
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"FAQPage",
+  "mainEntity":[
+    {{ $first := true }}
+    {{ range . }}
+      {{ if and .question .answer }}
+      {{ if not $first }},{{ end }}
+      {"@type":"Question","name":{{ .question | jsonify }},"acceptedAnswer":{"@type":"Answer","text":{{ .answer | plainify | jsonify }}}}
+      {{ $first = false }}
+      {{ end }}
+    {{ end }}
+  ]
+}
+</script>
+{{ end }}
+{{ end }}
+
 {{ define "main" }}
 <article class="article">
   <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="/">Kamera Timestamp</a>
-    <span>›</span>
-    <a href="/blog/">Blog</a>
-    <span>›</span>
-    <span>{{ .Title }}</span>
+    <a href="/">Kamera Timestamp</a><span>›</span><a href="/blog/">Blog</a><span>›</span><span>{{ .Title }}</span>
   </nav>
-
   <header class="article-header">
     <p class="eyebrow">KAMERA TIMESTAMP</p>
     <h1>{{ .Title }}</h1>
     {{ with .Description }}<p class="lead">{{ . }}</p>{{ end }}
     <p class="date">Diperbarui {{ (.Lastmod | default .Date).Format "2 January 2006" }}</p>
   </header>
-
   {{ partial "adsense.html" . }}
-
-  {{ if .TableOfContents }}
-  <aside class="toc">
-    <strong>Daftar isi</strong>
-    {{ .TableOfContents }}
-  </aside>
+  {{ with .TableOfContents }}
+  <aside class="toc"><strong>Daftar isi</strong>{{ . }}</aside>
   {{ end }}
-
-  <div class="article-content">
-    {{ .Content }}
-  </div>
-
+  <div class="article-content">{{ .Content }}</div>
   {{ partial "adsense.html" . }}
-
   <section class="cta">
     <p class="eyebrow">COBA GRATIS</p>
     <h2>Tambahkan timestamp ke foto Anda</h2>
     <p>Gunakan Kamera Timestamp Online langsung dari browser tanpa instal aplikasi.</p>
     <a class="cta-button" href="/">Buka Kamera Timestamp →</a>
   </section>
-
   {{ with .Params.faq }}
   <section class="faq">
     <h2>Pertanyaan yang sering ditanyakan</h2>
     {{ range . }}
       {{ if and .question .answer }}
-      <details>
-        <summary>{{ .question }}</summary>
-        <p>{{ .answer | markdownify }}</p>
-      </details>
+      <details><summary>{{ .question }}</summary><p>{{ .answer | markdownify }}</p></details>
       {{ end }}
     {{ end }}
   </section>
   {{ end }}
-
   {{ partial "adsense.html" . }}
-
   {{ $related := .Site.RegularPages.Related . | first 4 }}
   {{ with $related }}
   <section class="related">
     <h2>Artikel terkait</h2>
     <div class="related-grid">
       {{ range . }}
-      <a class="related-card" href="{{ .RelPermalink }}">
-        <strong>{{ .Title }}</strong>
-        <span>{{ .Date.Format "2 January 2006" }}</span>
-      </a>
+      <a class="related-card" href="{{ .RelPermalink }}"><strong>{{ .Title }}</strong><span>{{ .Date.Format "2 January 2006" }}</span></a>
       {{ end }}
     </div>
   </section>
