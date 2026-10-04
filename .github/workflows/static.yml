@@ -33,6 +33,12 @@ jobs:
       - name: Build Hugo blog
         run: hugo --minify
 
+      - name: Verify Hugo blog output
+        run: |
+          test -f public/blog/index.html
+          test -f public/blog/cara-menambahkan-timestamp-pada-foto/index.html
+          test -f public/ads.txt
+
       - name: Merge existing camera app
         run: |
           cp index.html public/index.html
