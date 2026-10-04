@@ -37,13 +37,17 @@
 {{ define "main" }}
 <article class="article">
   <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="/">Kamera Timestamp</a><span>›</span><a href="/blog/">Blog</a><span>›</span><span>{{ .Title }}</span>
+    <a href="/">Kamera Timestamp</a><span>›</span><a href="/blog/">Blog</a><span>›</span><span aria-current="page">{{ .Title }}</span>
   </nav>
+
   <header class="article-header">
-    <p class="eyebrow">KAMERA TIMESTAMP</p>
+    <div class="post-meta">
+      <span>{{ .Date.Format "2 January 2006" }}</span>
+      {{ with index .Params.categories 0 }}<span>·</span><span>{{ . }}</span>{{ end }}
+      {{ with .ReadingTime }}<span>·</span><span>{{ . }} min baca</span>{{ end }}
+    </div>
     <h1>{{ .Title }}</h1>
     {{ with .Description }}<p class="lead">{{ . }}</p>{{ end }}
-    <p class="date">Diperbarui {{ (.Lastmod | default .Date).Format "2 January 2006" }}</p>
   </header>
 
   {{ partial "adsense.html" . }}
@@ -57,9 +61,9 @@
   {{ partial "adsense.html" . }}
 
   <section class="cta">
-    <p class="eyebrow">COBA GRATIS</p>
-    <h2>Tambahkan timestamp ke foto Anda</h2>
-    <p>Gunakan Kamera Timestamp Online langsung dari browser tanpa instal aplikasi.</p>
+    <p class="eyebrow">ALAT GRATIS</p>
+    <h2>Langsung buat foto bertimestamp</h2>
+    <p>Tambahkan tanggal, jam, GPS, alamat, catatan, dan watermark langsung dari browser.</p>
     <a class="cta-button" href="/">Buka Kamera Timestamp →</a>
   </section>
 
@@ -79,10 +83,13 @@
   {{ $related := .Site.RegularPages.Related . | first 4 }}
   {{ with $related }}
   <section class="related">
-    <h2>Artikel terkait</h2>
+    <div class="section-heading-row"><h2>Artikel terkait</h2><a href="/blog/">Lihat semua →</a></div>
     <div class="related-grid">
       {{ range . }}
-      <a class="related-card" href="{{ .RelPermalink }}"><strong>{{ .Title }}</strong><span>{{ .Date.Format "2 January 2006" }}</span></a>
+      <a class="related-card" href="{{ .RelPermalink }}">
+        <strong>{{ .Title }}</strong>
+        <span>{{ .Date.Format "2 January 2006" }}</span>
+      </a>
       {{ end }}
     </div>
   </section>
