@@ -1,22 +1,19 @@
 <!doctype html>
-<html lang="{{ .Site.LanguageCode | default "id" }}">
+<html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4efe6">
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
   {{ $description := .Description | default .Site.Params.description }}
   <meta name="description" content="{{ $description }}">
   {{ with .Params.keywords }}<meta name="keywords" content="{{ delimit . ", " }}">{{ end }}
   <meta name="robots" content="{{ if .Draft }}noindex,follow{{ else }}index,follow,max-image-preview:large{{ end }}">
   <link rel="canonical" href="{{ .Permalink }}">
-  {{ if .IsPage }}
-  <meta property="og:type" content="article">
-  {{ else }}
-  <meta property="og:type" content="website">
-  {{ end }}
   <meta property="og:title" content="{{ .Title }}">
   <meta property="og:description" content="{{ $description }}">
   <meta property="og:url" content="{{ .Permalink }}">
+  <meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
   <meta name="twitter:card" content="summary">
   {{ block "head-extra" . }}{{ end }}
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8942638117851999" crossorigin="anonymous"></script>
@@ -25,10 +22,11 @@
 <body>
 <header class="blog-header">
   <div class="blog-shell blog-nav">
-    <a class="blog-brand" href="/blog/">Kamera Timestamp</a>
+    <a class="blog-brand" href="/"><span class="blog-badge">KT</span><span>Kamera Timestamp</span></a>
     <nav aria-label="Navigasi blog">
       <a href="/">Kamera</a>
-      <a href="/blog/">Blog</a>
+      <a href="/blog/" aria-current="{{ if eq .Section "blog" }}page{{ end }}">Blog</a>
+      <a class="nav-cta" href="/">Buka Kamera →</a>
     </nav>
   </div>
 </header>
@@ -36,7 +34,10 @@
   {{ block "main" . }}{{ end }}
 </main>
 <footer class="blog-footer">
-  <div class="blog-shell">© {{ now.Year }} Kamera Timestamp</div>
+  <div class="blog-shell footer-grid">
+    <div><strong>Kamera Timestamp</strong><p>Tool foto bertimestamp dengan tanggal, waktu, GPS, dan watermark langsung dari browser.</p></div>
+    <div class="footer-links"><a href="/">Kamera</a><a href="/blog/">Blog</a></div>
+  </div>
 </footer>
 </body>
 </html>
