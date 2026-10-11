@@ -75,7 +75,8 @@ const PALETTES = {
   dark: { bg: 'rgba(0,0,0,.74)', text: '#ffffff', accent: '#d8ef72' },
   light: { bg: 'rgba(255,255,255,.88)', text: '#151515', accent: '#214f3b' },
   blue: { bg: 'rgba(22,73,101,.88)', text: '#ffffff', accent: '#a9ddff' },
-  green: { bg: 'rgba(24,76,54,.9)', text: '#ffffff', accent: '#d8ef72' }
+  green: { bg: 'rgba(24,76,54,.9)', text: '#ffffff', accent: '#d8ef72' },
+  none: { bg: 'transparent', text: '#ffffff', accent: 'transparent' }
 };
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -188,9 +189,11 @@ async function capturePhoto() {
 function updateLiveStamp() {
   const palette = PALETTES[stampColor];
   liveStamp.textContent = buildStampLines().join('\n');
-  liveStamp.style.background = palette.bg;
+  const noBackground = stampColor === 'none';
+  liveStamp.style.background = noBackground ? 'transparent' : palette.bg;
   liveStamp.style.color = palette.text;
-  liveStamp.style.borderLeft = accentBar.checked ? `3px solid ${palette.accent}` : '0';
+  liveStamp.style.borderLeft = accentBar.checked && !noBackground ? `3px solid ${palette.accent}` : '0';
+  liveStamp.style.textShadow = noBackground ? '0 1px 3px rgba(0,0,0,.95), 0 0 5px rgba(0,0,0,.8)' : 'none';
   liveStamp.style.left = liveStamp.style.right = liveStamp.style.top = liveStamp.style.bottom = 'auto';
   const inset = '14px';
   if (stampPosition.includes('left')) liveStamp.style.left = inset; else liveStamp.style.right = inset;
@@ -198,7 +201,7 @@ function updateLiveStamp() {
   const scale = Number(stampSize.value) / 85;
   const px = clamp(cameraStage.clientWidth * .022 * scale, 7, 15);
   liveStamp.style.fontSize = `${px}px`;
-  liveStamp.style.padding = `${Math.round(6*scale)}px ${Math.round(8*scale)}px`;
+  liveStamp.style.padding = noBackground ? '0' : `${Math.round(6*scale)}px ${Math.round(8*scale)}px`;
 }
 
 function wrapText(ctx, text, maxWidth) {
@@ -223,15 +226,18 @@ function getStampMetrics(ctx,w,h,lines) {
   const shortSide = Math.min(w,h);
   const fontSize = Math.round(clamp(shortSide * .022 * scale, 14, 50));
   const lineHeight = Math.round(fontSize * 1.22);
-  const padX = Math.round(fontSize * .55), padY = Math.round(fontSize * .42);
+  const noBackground = stampColor === 'none';
+  const hasAccent = accentBar.checked && !noBackground;
+  const padX = noBackground ? 0 : Math.round(fontSize * .55);
+  const padY = noBackground ? 0 : Math.round(fontSize * .42);
   const margin = Math.round(clamp(shortSide * .02, 14, 44));
   const maxTextWidth = Math.min(w * .68, w - margin*2 - padX*2);
   ctx.font = `800 ${fontSize}px system-ui,-apple-system,Segoe UI,sans-serif`;
   const wrapped = lines.flatMap(line => wrapText(ctx,line,maxTextWidth));
   const textWidth = Math.max(1,...wrapped.map(line => ctx.measureText(line).width));
-  const boxW = Math.min(w-margin*2,textWidth+padX*2+(accentBar.checked?Math.round(fontSize*.18):0));
+  const boxW = Math.min(w-margin*2,textWidth+padX*2+(hasAccent?Math.round(fontSize*.18):0));
   const boxH = wrapped.length*lineHeight+padY*2;
-  return {fontSize,lineHeight,padX,padY,margin,wrapped,boxW,boxH};
+  return {fontSize,lineHeight,padX,padY,margin,wrapped,boxW,boxH,noBackground,hasAccent};
 }
 function drawStamp(ctx,w,h,lines) {
   if (!lines.length) return;
@@ -241,13 +247,23 @@ function drawStamp(ctx,w,h,lines) {
   if (stampPosition.includes('right')) x=w-m.boxW-m.margin;
   if (stampPosition.includes('bottom')) y=h-m.boxH-m.margin;
   ctx.save();
-  ctx.fillStyle=palette.bg; roundedRect(ctx,x,y,m.boxW,m.boxH,Math.round(m.fontSize*.22)); ctx.fill();
+  if (!m.noBackground) {
+    ctx.fillStyle=palette.bg;
+    roundedRect(ctx,x,y,m.boxW,m.boxH,Math.round(m.fontSize*.22));
+    ctx.fill();
+  }
   let textX=x+m.padX;
-  if (accentBar.checked) {
+  if (m.hasAccent) {
     const barW=Math.max(3,Math.round(m.fontSize*.12));
     ctx.fillStyle=palette.accent; ctx.fillRect(x,y,barW,m.boxH); textX+=barW;
   }
   ctx.fillStyle=palette.text; ctx.font=`800 ${m.fontSize}px system-ui,-apple-system,Segoe UI,sans-serif`; ctx.textBaseline='top';
+  if (m.noBackground) {
+    ctx.lineJoin='round';
+    ctx.lineWidth=Math.max(2,Math.round(m.fontSize*.12));
+    ctx.strokeStyle='rgba(0,0,0,.82)';
+    m.wrapped.forEach((line,i)=>ctx.strokeText(line,textX,y+m.padY+i*m.lineHeight));
+  }
   m.wrapped.forEach((line,i)=>ctx.fillText(line,textX,y+m.padY+i*m.lineHeight));
   ctx.restore();
 }
